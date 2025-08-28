@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAZER: Robust Accelerated Zero-Shot 3D Open-Vocabulary Panoptic Reconstruction</title>
+    <meta name="description"
+        content="Official project page for RAZER: A zero-shot framework that seamlessly integrates GPU-accelerated geometric reconstruction with open-vocabulary vision-language models through online instance-level semantic embedding fusion.">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Source+Sans+Pro:wght@400;600&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <div class="nav-container">
+        <div class="container">
+            <nav>
+                <div class="left-logo">
+                    <a href="https://aigeeksgroup.github.io/Nav-R1" target="_blank" class="nav-icon-link crrl-logo" title="Nav-R1">
+                        <img src="images/navr1_logo.png" alt="Nav-R1 Logo" class="nav-logo-img">
+                    </a>
+                </div>
+                <div class="nav-center">
+                    <a href="#" class="nav-logo">Nav-R1</a>
+                    <div class="nav-links">
+                        <a href="#overview">Overview</a>
+                        <a href="#method">Method</a>
+                        <a href="#applications">Applications</a>
+                        <a href="#citation">Citation</a>
+                    </div>
+                </div>
+                <div class="right-logo">
+                    <a href="https://aigeeksgroup.github.io/" target="_blank" class="nav-icon-link nyu-logo" title="NYU Tandon School of Engineering">
+                        <img src="images/aigeeks.svg" alt="AI-Geeks Logo" class="nav-logo-img">
+                    </a>
+                </div>
+                <div class="hamburger">
+                    <i class="fas fa-bars"></i>
+                </div>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container hero-content">
+            <h1>Nav-R1: Reasoning and Navigation in Embodied Scenes</h1>
+
+            <!-- <h2>Conference 2026</h2> -->
+
+            <div class="authors">
+                <div class="author">
+                    <a href="#">Qingxiang Liu</a><sup>1*</sup>
+                </div>
+                <div class="author">
+                    <a href="#">Ting Huang</a><sup>1*</sup>
+                </div>
+                <div class="author">
+                    <a href="https://steve-zeyu-zhang.github.io/">Zeyu Zhang</a><sup>2*†</sup>
+                </div>
+                <div class="author">
+                    <a href="https://ha0tang.github.io/">Hao Tang</a><sup>2‡</sup>
+                </div>
+            </div>
+
+            <p>
+                <sup>1</sup>Shanghai University of Engineering Science &nbsp;&nbsp;&nbsp;&nbsp;
+                <sup>2</sup>Peking University
+              </p>              
+
+            <div class="paper-links">
+                <a href="razer_open_vocab.pdf" class="button button-primary" target="_blank"><i class="fas fa-file-pdf"></i> Paper</a>
+                <a href="https://arxiv.org/abs/2505.15373" class="button button-primary" target="_blank"><i class="fas fa-code-branch"></i> Code</a>
+                <a href="https://arxiv.org/abs/2505.15373" class="button button-primary" target="_blank"><i class="fas fa-archive"></i> Data</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Abstract Section -->
+    <section class="section section-light" id="overview">
+        <div class="container">
+            <h2>Overview</h2>
+
+            <div class="video-container">
+                <video controls autoplay muted loop>
+                  <source src="videos/overview.mp4" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+
+            <div class="abstract">
+                <p>
+                    <strong>Nav-R1</strong> is an embodied foundation model that integrates dialogue, reasoning, planning, and navigation capabilities to enable intelligent interaction and task execution in 3D environments.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Teaser Video Section -->
+    <section class="section section-dark" id="overview">
+        <div class="container">
+            <h2>System Overview</h2>
+
+            <div class="video-container">
+                <div class="embedded-video">
+                    <iframe width="100%" height="500" 
+                        src="https://www.youtube.com/embed/a0oEoFxLR4g" 
+                        title="RAZER: Robust Accelerated Zero-Shot 3D Open-Vocabulary Panoptic Reconstruction" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                        allowfullscreen>
+                    </iframe>
+                </div>
+                <div class="figure-caption">
+                    <strong>Video:</strong> RAZER in action - demonstrating real-time 3D scene understanding
+                    capabilities with open-vocabulary semantic mapping.
+                </div>
+            </div>
+
+            <div class="figure">
+                <img src="images/overview.png" alt="RAZER System Overview">
+                <div class="figure-caption">
+                    <strong>Figure 1:</strong> Pipeline overview of our proposed 3D scene understanding framework. Our
+                    system processes posed RGB-D inputs through open-vocabulary segmentation for robust 3D instance
+                    tracking. Spatio-temporal feature aggregation fuses and prunes tracks while updating a panoptic map
+                    that enables online text-based 3D instance retrieval and segmentation tasks.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Contributions Section -->
+    <section class="section section-light">
+        <div class="container">
+            <h2>Key Contributions</h2>
+
+            <div class="contributions">
+                <div class="contribution fade-in">
+                    <div class="contribution-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <h3>Zero-Shot Understanding</h3>
+                    <p>Integrates vision-language models with 3D reconstruction for open-vocabulary recognition 
+                        of diverse object categories without requiring additional training.</p>
+                </div>
+
+                <div class="contribution fade-in">
+                    <div class="contribution-icon">
+                        <i class="fas fa-tachometer-alt"></i>
+                    </div>
+                    <h3>Real-Time Performance</h3>
+                    <p>CUDA-accelerated processing at 103ms/frame (4× faster than comparable methods) with 
+                        optimized algorithms for efficient mapping without global optimization.</p>
+                </div>
+
+                <div class="contribution fade-in">
+                    <div class="contribution-icon">
+                        <i class="fas fa-project-diagram"></i>
+                    </div>
+                    <h3>R-Tree Spatial Indexing</h3>
+                    <p>Efficient O(log n) object association using spatial hierarchies with Hungarian matching 
+                        for improved tracking through occlusions and viewpoint changes.</p>
+                </div>
+
+                <div class="contribution fade-in">
+                    <div class="contribution-icon">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <h3>Spatio-Temporal Aggregation</h3>
+                    <p>Instance-level semantic embedding fusion across frames, guided by hierarchical object 
+                        association for consistent identity tracking in dynamic environments.</p>
+                </div>
+                
+                <div class="contribution fade-in">
+                    <div class="contribution-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h3>Multi-Embedding Fusion</h3>
+                    <p>Maintains up to three semantic embeddings per object with confidence-based pruning 
+                        to handle ambiguous interpretations in complex, cluttered scenes.</p>
+                </div>
+
+                <div class="contribution fade-in">
+                    <div class="contribution-icon">
+                        <i class="fas fa-cubes"></i>
+                    </div>
+                    <h3>Unified Geometric-Semantic Mapping</h3>
+                    <p>TSDF-based approach combining volumetric reconstruction with semantic embedding updates
+                        to address 2D segmentation inconsistencies during 3D mapping.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Method Section -->
+    <section class="section section-dark" id="method">
+        <div class="container">
+            <h2>Method</h2>
+
+            <div class="method-overview">
+                <div class="figure">
+                    <img src="images/system.png" alt="RAZER System Architecture">
+                    <div class="figure-caption">
+                        <strong>Figure 2:</strong> System-level architecture of RAZER with three main modules: (1)
+                        Instance Tracking, (2) Aggregation Manager, and (3) Map Update. RGB-D inputs are processed
+                        through open-vocabulary segmentation, maintaining a unified voxel-based representation.
+                    </div>
+                </div>
+            </div>
+
+            <div class="method-columns">
+                <div class="method-column fade-in">
+                    <div class="method-icon">
+                        <i class="fas fa-cube"></i>
+                    </div>
+                    <h3>3D Object Detection & Tracking</h3>
+                    <p>Open-vocabulary segmentation masks are back-projected to 3D and clustered with DBSCAN to handle occlusions.
+                       Objects are tracked via R-tree spatial indexing and Hungarian bipartite matching, with incremental
+                       OBB updates to refine geometric estimates as new observations arrive.</p>
+                </div>
+
+                <div class="method-column fade-in">
+                    <div class="method-icon">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <h3>Semantic Embedding Management</h3>
+                    <p>Features from each mask are pooled to form semantic embeddings in a continuous representation space.
+                       Up to three embeddings per object are maintained with confidence scores, using a similarity-based 
+                       fusion mechanism to handle ambiguous interpretations and resolve them over time.</p>
+                </div>
+
+                <div class="method-column fade-in">
+                    <div class="method-icon">
+                        <i class="fas fa-cubes"></i>
+                    </div>
+                    <h3>Volumetric Reconstruction</h3>
+                    <p>A TSDF-based representation combines both geometric and semantic information at the voxel level.
+                       Each voxel stores signed distance, color, instance labels, and a histogram of observations, updated
+                       incrementally with GPU acceleration to maintain geometric-semantic consistency.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Applications Section -->
+    <section class="section section-light" id="applications">
+        <div class="container">
+            <h2>Applications</h2>
+
+            <div class="method-columns">
+                <div class="method-column fade-in">
+                    <div class="method-icon">
+                        <i class="fas fa-object-group"></i>
+                    </div>
+                    <h3>3D Instance Segmentation</h3>
+                    <p>RAZER maintains instance-level bounding boxes and voxel-level labels, providing complete 3D
+                        segmentation that updates in real-time as new viewpoints become available. This enables
+                        applications like robotic manipulation that require precise object boundaries.</p>
+                </div>
+
+                <div class="method-column fade-in">
+                    <div class="method-icon">
+                        <i class="fas fa-th"></i>
+                    </div>
+                    <h3>3D Semantic Segmentation</h3>
+                    <p>Our framework performs open-vocabulary 3D semantic segmentation with state-of-the-art
+                        performance, nearly doubling the effectiveness of previous approaches while
+                        preserving fine-grained details across diverse object categories.</p>
+                </div>
+
+                <div class="method-column fade-in">
+                    <div class="method-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h3>3D Instance Retrieval</h3>
+                    <p>The open-vocabulary embeddings enable text-based object search in 3D environments. Natural
+                        language queries are processed through the same vision-language model to retrieve semantically
+                        similar objects without requiring class specific training.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Citation Section -->
+    <section class="section section-light" id="citation">
+        <div class="container">
+            <h2>Citation</h2>
+
+            <div class="citation">
+                <button class="copy-button">
+                    <i class="fas fa-copy"></i> Copy BibTeX
+                    <span class="copy-btn-tooltip">Click to copy</span>
+                </button>
+                <pre>@article{patel2025razer,
+  title={RAZER: Robust Accelerated Zero-Shot 3D Open-Vocabulary Panoptic Reconstruction with Spatio-Temporal Aggregation},
+  author={Patel, Naman and Krishnamurthy, Prashanth and Khorrami, Farshad},
+  journal={arXiv preprint arXiv:2505.15373},
+  year={2025}
+}</pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Contact</h3>
+                    <p>For questions about this work, please contact:</p>
+                    <p><a href="mailto:nkp269@nyu.edu">nkp269@nyu.edu</a></p>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2025 NYU Tandon School of Engineering. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+</body>
+
+</html>
