@@ -20,6 +20,11 @@ body {
   background-color: var(--light);
 }
 
+.contrib-notes {
+  font-size: 0.85em;   /* smaller than normal text */
+  color: #ccc;         /* optional: lighter color */
+}
+
 .container {
   max-width: var(--max-width);
   width: 90%;
