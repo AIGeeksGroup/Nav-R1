@@ -91,10 +91,16 @@
         </div>
     </section>
 
-    <!-- Abstract Section -->
+    <!-- Teaser Section -->
     <section class="section section-light" id="overview">
         <div class="container">
             <h2>Overview</h2>
+
+            <div class="abstract">
+                <p>
+                    <strong>TL;DR:</strong> <b>Nav-R1</b> is an embodied foundation model that integrates dialogue, reasoning, planning, and navigation capabilities to enable intelligent interaction and task execution in 3D environments.
+                </p>
+            </div>
 
             <div class="video-container">
                 <video controls autoplay muted loop>
@@ -102,47 +108,643 @@
                   Your browser does not support the video tag.
                 </video>
               </div>
-
-            <div class="abstract">
-                <p>
-                    <strong>Nav-R1</strong> is an embodied foundation model that integrates dialogue, reasoning, planning, and navigation capabilities to enable intelligent interaction and task execution in 3D environments.
-                </p>
-            </div>
         </div>
     </section>
 
-    <!-- Teaser Video Section -->
-    <section class="section section-dark" id="overview">
+    <!-- <section class="section section-dark" id="overview">
         <div class="container">
             <h2>System Overview</h2>
 
             <div class="video-container">
-                <div class="embedded-video">
-                    <iframe width="100%" height="500" 
-                        src="https://www.youtube.com/embed/a0oEoFxLR4g" 
-                        title="RAZER: Robust Accelerated Zero-Shot 3D Open-Vocabulary Panoptic Reconstruction" 
-                        frameborder="0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                        allowfullscreen>
-                    </iframe>
-                </div>
+                <video controls autoplay muted loop>
+                  <source src="videos/overview.mp4" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video>
                 <div class="figure-caption">
                     <strong>Video:</strong> RAZER in action - demonstrating real-time 3D scene understanding
                     capabilities with open-vocabulary semantic mapping.
                 </div>
             </div>
 
-            <div class="figure">
-                <img src="images/overview.png" alt="RAZER System Overview">
-                <div class="figure-caption">
-                    <strong>Figure 1:</strong> Pipeline overview of our proposed 3D scene understanding framework. Our
-                    system processes posed RGB-D inputs through open-vocabulary segmentation for robust 3D instance
-                    tracking. Spatio-temporal feature aggregation fuses and prunes tracks while updating a panoptic map
-                    that enables online text-based 3D instance retrieval and segmentation tasks.
-                </div>
-            </div>
         </div>
-    </section>
+    </section> -->
+
+    <section class="section section-dark" id="overview">
+        <div class="container">
+          <h2>Real World Navigation</h2>
+      
+          <div class="carousel">
+            <div class="carousel-track">
+                <!-- Slide 1 -->
+                <div class="slide">
+
+                    <!-- Column headers -->
+                    <div class="grid-headers">
+                    <div>Bird's Eye View</div>
+                    <div>Ego View</div>
+                    <div>Depth</div>
+                    <div>Point Map</div>
+                    </div>
+
+                    <h3>VLN</h3>
+                
+                    <!-- Video grid -->
+                    <div class="video-grid">
+                    <!-- 4 video blocks (4 × 1) -->
+
+                        <div class="row-caption">
+                            Start from the initial position and walk straight toward the chair on the left front. Pause briefly near the chair, then continue moving forward in a straight line toward the glass door on the right front, and stop at the door.
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task1/bev-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task1/ego-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                        </div>
+                    
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task1/depthmap-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task1/point-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                    </div>
+
+
+                    <div class="video-grid">
+
+                        <div class="row-caption">
+                            Walk straight down, then turn right and approach the row of black chairs. Stop beside the nearest chair.
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task2/bev-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task2/ego-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                        </div>
+                    
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task2/depthmap-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task2/point-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                    </div>
+
+                    <div class="video-grid">
+
+                        <div class="row-caption">
+                            Walk straight ahead, keeping the big wooden table on your left. Go all the way to the side of the table and then turn right. After that, just head straight until you reach the wall in front of you and stop there.
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task3/bev-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task3/ego-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                        </div>
+                    
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task3/depthmap-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task3/point-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                    </div>
+
+                    <h3>ObjectNav</h3>
+
+                    <div class="video-grid">
+
+                        <div class="row-caption">
+                            Find the blue dustpan on the left side near the chairs.
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task4/bev-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task4/ego-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                        </div>
+                    
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task4/depthmap-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task4/point-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                    </div>
+
+                    <div class="video-grid">
+
+                        <div class="row-caption">
+                            Go to the chair with wooden legs on the left side.
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task5/bev-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task5/ego-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                        </div>
+                    
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task5/depthmap-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene1/task5/point-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                    </div>
+
+                </div>
+  
+      
+                <!-- Slide 2 -->
+                <div class="slide">
+
+                    <!-- Column headers -->
+                    <div class="grid-headers">
+                    <div>Bird's Eye View</div>
+                    <div>Ego View</div>
+                    <div>Depth</div>
+                    <div>Point Map</div>
+                    </div>
+
+                    <h3>VLN</h3>
+                
+                    <!-- Video grid -->
+                    <div class="video-grid">
+                    <!-- 4 video blocks (4 × 1) -->
+
+                        <div class="row-caption">
+                            Head straight, then turn left when you reach the couch, and stop in front of it.
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task1/bev-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task1/ego-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                        </div>
+                    
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task1/depthmap-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task1/point-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                    </div>
+
+
+                    <div class="video-grid">
+
+                        <div class="row-caption">
+                            Walk straight ahead, then turn when you reach the couch on your right, and stop next to it.
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task2/bev-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task2/ego-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                        </div>
+                    
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task2/depthmap-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task2/point-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                    </div>
+
+                    <div class="video-grid">
+
+                        <div class="row-caption">
+                            Start from the beginning, walk to the side table on your right and pause there. Then go straight towards the front-left and stop at the wall.
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task3/bev-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task3/ego-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                        </div>
+                    
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task3/depthmap-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task3/point-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                    </div>
+
+                    <h3>ObjectNav</h3>
+
+                    <div class="video-grid">
+
+                        <div class="row-caption">
+                            Head towards the front-right area and look for the white mouse near the sofa and side table.
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task4/bev-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task4/ego-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                        </div>
+                    
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task4/depthmap-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task4/point-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                    </div>
+
+                    <div class="video-grid">
+
+                        <div class="row-caption">
+                            Move straight ahead and look for the keyboard along the wall in front.
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task5/bev-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task5/ego-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                        </div>
+                    
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task5/depthmap-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                        <div class="video-block">
+                            <video controls autoplay muted loop>
+                            <source src="/home/zhang/Downloads/Nav-R1/real-world/scene2/task5/point-1.mp4" type="video/mp4">
+                            </video>
+                            <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                        </div>
+
+                    </div>
+
+                </div>
+  
+
+              <!-- Slide 3 -->
+              <div class="slide">
+
+                <!-- Column headers -->
+                <div class="grid-headers">
+                <div>Bird's Eye View</div>
+                <div>Ego View</div>
+                <div>Depth</div>
+                <div>Point Map</div>
+                </div>
+
+                <h3>VLN</h3>
+            
+                <!-- Video grid -->
+                <div class="video-grid">
+                <!-- 4 video blocks (4 × 1) -->
+
+                    <div class="row-caption">
+                        Walk straight to the black chair on your left. At the chair, turn left and stop facing the wall.
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task1/bev-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task1/ego-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                    </div>
+                
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task1/depthmap-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task1/point-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                </div>
+
+
+                <div class="video-grid">
+
+                    <div class="row-caption">
+                        Walk straight to the black chair on your right. Then turn right and stop facing the chair.
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task2/bev-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task2/ego-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                    </div>
+                
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task2/depthmap-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task2/point-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                </div>
+
+                <div class="video-grid">
+
+                    <div class="row-caption">
+                        Go to the black chair on your left and pause, then move forward to the front-right and stop at the blue umbrella.
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task3/bev-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task3/ego-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                    </div>
+                
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task3/depthmap-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task3/point-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                </div>
+
+                <h3>ObjectNav</h3>
+
+                <div class="video-grid">
+
+                    <div class="row-caption">
+                        Move straight ahead and look for the blue umbrella in front.
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task4/bev-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task4/ego-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                    </div>
+                
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task4/depthmap-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task4/point-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                </div>
+
+                <div class="video-grid">
+
+                    <div class="row-caption">
+                        Head towards the front-left and find the black chair.
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task5/bev-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task5/ego-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 1 caption here</div> -->
+                    </div>
+                
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task5/depthmap-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                    <div class="video-block">
+                        <video controls autoplay muted loop>
+                        <source src="/home/zhang/Downloads/Nav-R1/real-world/scene3/task5/point-1.mp4" type="video/mp4">
+                        </video>
+                        <!-- <div class="figure-caption">Video 2 caption here</div> -->
+                    </div>
+
+                </div>
+
+            </div>
+      
+              <!-- Add more slides here -->
+            </div>
+      
+            <!-- Dots -->
+            <div class="carousel-dots"></div>
+          </div>
+        </div>
+      </section>
 
     <!-- Key Contributions Section -->
     <section class="section section-light">
@@ -212,14 +814,13 @@
         <div class="container">
             <h2>Method</h2>
 
-            <div class="method-overview">
-                <div class="figure">
-                    <img src="images/system.png" alt="RAZER System Architecture">
-                    <div class="figure-caption">
-                        <strong>Figure 2:</strong> System-level architecture of RAZER with three main modules: (1)
-                        Instance Tracking, (2) Aggregation Manager, and (3) Map Update. RGB-D inputs are processed
-                        through open-vocabulary segmentation, maintaining a unified voxel-based representation.
-                    </div>
+            <div class="figure">
+                <img src="images/overview.png" alt="RAZER System Overview">
+                <div class="figure-caption">
+                    <strong>Figure 1:</strong> Pipeline overview of our proposed 3D scene understanding framework. Our
+                    system processes posed RGB-D inputs through open-vocabulary segmentation for robust 3D instance
+                    tracking. Spatio-temporal feature aggregation fuses and prunes tracks while updating a panoptic map
+                    that enables online text-based 3D instance retrieval and segmentation tasks.
                 </div>
             </div>
 
@@ -330,5 +931,83 @@
     <!-- Scripts -->
     <script src="js/main.js"></script>
 </body>
+
+<style>
+.carousel {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+.carousel-track {
+  display: flex;
+  scroll-snap-type: x mandatory;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+}
+
+.slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  box-sizing: border-box;
+  padding: 1rem;
+  text-align: center;
+}
+
+.slide video {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+.figure-caption {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.75rem;
+}
+
+.carousel-dots button {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  margin: 0 5px;
+  background-color: #aaa;
+  cursor: pointer;
+}
+
+.carousel-dots button.active {
+  background-color: #333;
+}
+</style>
+
+<script>
+    const track = document.querySelector('.carousel-track');
+    const dotsContainer = document.querySelector('.carousel-dots');
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    
+    slides.forEach((_, idx) => {
+      const dot = document.createElement('button');
+      if (idx === 0) dot.classList.add('active');
+      dot.addEventListener('click', () => {
+        track.scrollTo({
+          left: slides[idx].offsetLeft,
+          behavior: 'smooth'
+        });
+      });
+      dotsContainer.appendChild(dot);
+    });
+    
+    track.addEventListener('scroll', () => {
+      const index = Math.round(track.scrollLeft / track.offsetWidth);
+      dotsContainer.querySelectorAll('button').forEach((b, i) =>
+        b.classList.toggle('active', i === index)
+      );
+    });
+</script>
 
 </html>

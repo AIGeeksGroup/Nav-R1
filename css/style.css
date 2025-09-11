@@ -507,6 +507,47 @@ p {
   margin-bottom: 2rem;
 }
 
+/* Column headers (1,2,3,4) */
+.grid-headers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: var(--primary); /* use your theme color */
+}
+
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.video-grid .row-caption {
+  grid-column: 1 / -1;   /* span entire row */
+  width: 100%;
+  text-align: center;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+  color: #444;
+}
+
+
+.video-block video {
+  width: 100%;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.video-block .figure-caption {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+  text-align: center;
+}
+
+
 /* Figures and Images */
 .figure {
   margin: 3rem auto;
@@ -533,7 +574,7 @@ p {
 
 .figure-caption {
   margin-top: 1.5rem;
-  font-size: 0.95rem;
+  font-size: clamp(1.15rem, 1.2vw + 0.6rem, 1rem) !important;
   color: #555;
   max-width: 800px;
   margin-left: auto;
