@@ -1,4 +1,4 @@
-# <img src="./assets/navr1_logo.png" alt="logo" width="25"/> Nav-R1: Reasoning and Navigation in Embodied Scenes
+# <img src="./assets/navr1_logo.png" alt="logo" width="40"/> Nav-R1: Reasoning and Navigation in Embodied Scenes
 
 This is the official repository for the paper:
 > **Nav-R1: Reasoning and Navigation in Embodied Scenes**
