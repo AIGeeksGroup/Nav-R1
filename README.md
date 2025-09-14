@@ -3,11 +3,11 @@
 This is the official repository for the paper:
 > **Nav-R1: Reasoning and Navigation in Embodied Scenes**
 >
-> [Qingxiang Liu](*)\*, [Ting Huang](https://github.com/Believeht029)\*, [Zeyu Zhang](https://steve-zeyu-zhang.github.io/)\*<sup>†</sup>, and [Hao Tang](https://ha0tang.github.io/)<sup>#</sup>
+> [Qingxiang Liu](https://github.com/AMXalice)\*, [Ting Huang](https://github.com/Believeht029)\*, [Zeyu Zhang](https://steve-zeyu-zhang.github.io/)\*<sup>†</sup>, and [Hao Tang](https://ha0tang.github.io/)<sup>#</sup>
 >
 > \*Equal contribution. <sup>†</sup>Project lead. <sup>#</sup>Corresponding author.
 >
-> ### [Paper]() | [Website](https://aigeeksgroup.github.io/Nav-R1/) | [Data](https://huggingface.co/datasets/AIGeeksGroup/Nav-CoT-110K) | [Models](*) | [HF Paper](*)
+> ### [Paper]() | [Website](https://aigeeksgroup.github.io/Nav-R1/) | [Data](https://huggingface.co/datasets/AIGeeksGroup/Nav-CoT-110K) | [Models](https://huggingface.co/AIGeeksGroup/Nav-R1) | [HF Paper]()
 
 
 ## ✏️ Citation
