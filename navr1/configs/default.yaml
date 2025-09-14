@@ -1,0 +1,177 @@
+# Nav-R1 Configuration
+defaults:
+  - _self_
+
+# Model Configuration
+model:
+  name: "navr1"
+  vision_encoder:
+    type: "3d_r1_vision"
+    pretrained_path: "model_zoo/3d_r1_vision.pth"
+    freeze_vision: false
+    point_cloud_dim: 3
+    max_points: 8192
+  language_model:
+    type: "llama2_7b"
+    pretrained_path: "model_zoo/llama2_7b"
+    freeze_lm: false
+  multimodal_fusion:
+    type: "cross_attention"
+    hidden_size: 4096
+    num_heads: 32
+    num_layers: 4
+  policy_head:
+    type: "mlp"
+    hidden_size: 2048
+    num_layers: 3
+    dropout: 0.1
+
+# Dataset Configuration
+dataset:
+  name: "nav_cot_110k"
+  path: "data/Nav-CoT-110K"
+  max_sequence_length: 2048
+  max_images: 8
+  image_size: 224
+  tokenizer:
+    type: "llama2"
+    max_length: 2048
+
+# Training Configuration
+training:
+  batch_size: 8
+  learning_rate: 1e-5
+  num_epochs: 10
+  warmup_steps: 1000
+  weight_decay: 0.01
+  gradient_accumulation_steps: 4
+  max_grad_norm: 1.0
+  save_steps: 1000
+  eval_steps: 500
+  logging_steps: 100
+
+# RL Configuration
+rl:
+  algorithm: "grpo"
+  learning_rate: 3e-6
+  num_epochs: 5
+  batch_size: 4
+  rollout_length: 128
+  gamma: 0.99
+  lambda_gae: 0.95
+  clip_ratio: 0.2
+  value_loss_coef: 0.5
+  entropy_coef: 0.01
+  max_grad_norm: 0.5
+  
+  # Reward Configuration
+  rewards:
+    format_weight: 1.0
+    understanding_weight: 2.0
+    navigation_weight: 3.0
+    
+  # Fast-in-Slow Reasoning
+  fast_slow:
+    slow_reasoning_interval: 5
+    fast_reasoning_steps: 3
+    reasoning_cache_size: 100
+
+# Simulator Configuration
+simulator:
+  type: "habitat"
+  habitat_config: "configs/tasks/vln_r2r.yaml"
+  scene_dataset: "data/scene_datasets"
+  episode_dataset: "data/datasets/R2R_VLNCE_v1-3_preprocessed"
+  max_episode_steps: 500
+  success_reward: 10.0
+  step_penalty: -0.01
+  collision_penalty: -1.0
+
+# Evaluation Configuration
+evaluation:
+  metrics:
+    - "success_rate"
+    - "spl"
+    - "ndtw"
+    - "sdtw"
+    - "path_length"
+    - "reasoning_quality"
+  num_episodes: 100
+  save_videos: true
+  video_fps: 10
+
+# Logging Configuration
+logging:
+  use_wandb: true
+  wandb_project: "navr1"
+  log_dir: "logs"
+  save_dir: "checkpoints"
+  experiment_name: "navr1_experiment"
+
+# Hardware Configuration
+hardware:
+  device: "cuda"
+  num_gpus: 1
+  mixed_precision: true
+  dataloader_num_workers: 4
+  pin_memory: true
+
+# 3D Tasks Configuration
+tasks:
+  scanrefer:
+    dataset_name: "scanrefer"
+    data_path: "data/ScanRefer"
+    max_sequence_length: 512
+    max_points: 4096
+    image_size: 224
+  scanqa:
+    dataset_name: "scanqa"
+    data_path: "data/ScanQA"
+    max_sequence_length: 512
+    max_points: 4096
+    image_size: 224
+  nr3d:
+    dataset_name: "nr3d"
+    data_path: "data/Nr3D"
+    max_sequence_length: 512
+    max_points: 4096
+    image_size: 224
+  scene30k:
+    dataset_name: "scene30k"
+    data_path: "data/Scene-30K"
+    max_sequence_length: 1024
+    max_points: 8192
+    image_size: 224
+
+# Embodied Tasks Configuration
+embodied_tasks:
+  dialogue:
+    dataset_name: "dialogue"
+    data_path: "data/EmbodiedDialogue"
+    max_sequence_length: 1024
+    max_images: 8
+    image_size: 224
+  reasoning:
+    dataset_name: "reasoning"
+    data_path: "data/EmbodiedReasoning"
+    max_sequence_length: 1024
+    max_images: 8
+    image_size: 224
+  planning:
+    dataset_name: "planning"
+    data_path: "data/EmbodiedPlanning"
+    max_sequence_length: 1024
+    max_images: 8
+    image_size: 224
+  vln:
+    dataset_name: "vln"
+    data_path: "data/VLN"
+    max_sequence_length: 512
+    max_images: 8
+    image_size: 224
+  objectnav:
+    dataset_name: "objectnav"
+    data_path: "data/ObjectNav"
+    max_sequence_length: 512
+    max_images: 8
+    image_size: 224

@@ -1,0 +1,79 @@
+# Benchmark configurations for Nav-R1
+
+# VLN-CE R2R Configuration
+vln_r2r:
+  dataset:
+    name: "vln_r2r"
+    type: "VLN-CE-v1"
+    split: "val_unseen"
+    data_path: "data/datasets/R2R_VLNCE_v1-3_preprocessed/{split}/{split}.json.gz"
+    gt_path: "data/datasets/R2R_VLNCE_v1-3_preprocessed/{split}/{split}_gt.json.gz"
+    scenes_dir: "data/scene_datasets/"
+    max_episode_steps: 500
+    
+  evaluation:
+    metrics:
+      - "success_rate"
+      - "spl"
+      - "ndtw"
+      - "sdtw"
+      - "path_length"
+    num_episodes: 1000
+    save_videos: false
+
+# VLN-CE RxR Configuration  
+vln_rxr:
+  dataset:
+    name: "vln_rxr"
+    type: "VLN-CE-RxR"
+    split: "val_unseen"
+    data_path: "data/datasets/RxR_VLNCE_v1-3_preprocessed/{split}/{split}.json.gz"
+    gt_path: "data/datasets/RxR_VLNCE_v1-3_preprocessed/{split}/{split}_gt.json.gz"
+    scenes_dir: "data/scene_datasets/"
+    max_episode_steps: 500
+    
+  evaluation:
+    metrics:
+      - "success_rate"
+      - "spl"
+      - "ndtw"
+      - "sdtw"
+      - "path_length"
+    num_episodes: 1000
+    save_videos: false
+
+# ObjectNav HM3D Configuration
+objectnav_hm3d:
+  dataset:
+    name: "objectnav_hm3d"
+    type: "ObjectNav-HM3D"
+    split: "val"
+    data_path: "data/datasets/HM3D/ObjectNav/v1/{split}/{split}.json"
+    scenes_dir: "data/scene_datasets/hm3d/"
+    max_episode_steps: 500
+    
+  evaluation:
+    metrics:
+      - "success_rate"
+      - "spl"
+      - "distance_to_goal"
+      - "path_length"
+    num_episodes: 1000
+    save_videos: false
+
+# Nav-CoT-110K Configuration
+nav_cot_110k:
+  dataset:
+    name: "nav_cot_110k"
+    path: "data/Nav-CoT-110K"
+    max_sequence_length: 2048
+    max_images: 8
+    image_size: 224
+    
+  evaluation:
+    metrics:
+      - "action_accuracy"
+      - "reasoning_quality"
+      - "instruction_following"
+    num_episodes: 100
+    save_videos: false
