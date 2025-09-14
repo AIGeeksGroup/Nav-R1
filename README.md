@@ -10,6 +10,11 @@ This is the official repository for the paper:
 > ### [Paper]() | [Website](https://aigeeksgroup.github.io/Nav-R1/) | [Data](https://huggingface.co/datasets/AIGeeksGroup/Nav-CoT-110K) | [Models](https://huggingface.co/AIGeeksGroup/Nav-R1) | [HF Paper]()
 
 
+https://github.com/user-attachments/assets/5eeb0e07-d5ea-483a-872c-b15f48838daa
+
+
+
+
 ## ✏️ Citation
 If you find our code or paper helpful, please consider starring ⭐ us and citing:
 ```bibtex
