@@ -37,7 +37,7 @@ Embodied navigation requires agents to integrate perception, reasoning, and acti
 ## TODO List
 
 - [x] Release Nav-CoT-110K dataset. (see [Nav-CoT-110K](https://huggingface.co/datasets/AIGeeksGroup/Nav-CoT-110K))
-- [ ] Upload our paper to arXiv and build project pages.
+- [x] Upload our paper to arXiv and build project pages.
 - [ ] Upload the code.
 - [ ] Add a demo on huggingface.
 
@@ -52,11 +52,13 @@ Embodied navigation requires agents to integrate perception, reasoning, and acti
 
 ### Real-World
 *Start from the beginning, walk to the side table on your right and pause there. Then go straight towards the front-left and stop at the wall.*
-<video src="./assets/real_world_VLN.mp4"  controls></video>
+
+<video src="https://github.com/user-attachments/assets/e68b95fb-877c-4baf-81e3-08642896004e"  controls style="max-width:100%;"></video>
 
 ### Simulator
 *Search for a chair.*
-<video src="./assets/simulator_ObjectNav.mp4" controls></video>
+
+<video src="https://github.com/user-attachments/assets/6ca5b560-e3ad-4f14-a74f-15fb71f4c415" controls style="max-width:100%;"></video>
 
 ## 🌟 Star History
 
