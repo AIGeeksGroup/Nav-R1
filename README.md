@@ -41,12 +41,22 @@ Embodied navigation requires agents to integrate perception, reasoning, and acti
 - [ ] Upload the code.
 - [ ] Add a demo on huggingface.
 
+## ![YouTube](https://img.shields.io/badge/YouTube-%23FF0000.svg?style=for-the-badge&logo=YouTube&logoColor=white) YouTube Video
+
+>[!NOTE]
+> If you’d like to learn more about our paper, be sure to check out this [**youtube video**](https://youtu.be/JL7MCNHeor0) by @AIResearchRoundup.
+
+[![Watch the video](https://img.youtube.com/vi/JL7MCNHeor0/maxresdefault.jpg)](https://youtu.be/JL7MCNHeor0)
 
 ## 👩🏻‍💻 Case Study
 
 ### Real-World
+*Start from the beginning, walk to the side table on your right and pause there. Then go straight towards the front-left and stop at the wall.*
+<video src="./assets/real_world_VLN.mp4"  controls></video>
 
 ### Simulator
+*Search for a chair.*
+<video src="./assets/simulator_ObjectNav.mp4" controls></video>
 
 ## 🌟 Star History
 
