@@ -7,7 +7,7 @@ This is the official repository for the paper:
 >
 > \*Equal contribution. <sup>†</sup>Project lead. <sup>#</sup>Corresponding author.
 >
-> ### [Paper]() | [Website](https://aigeeksgroup.github.io/Nav-R1/) | [Data](https://huggingface.co/datasets/AIGeeksGroup/Nav-CoT-110K) | [Models](https://huggingface.co/AIGeeksGroup/Nav-R1) | [HF Paper]()
+> ### [Paper](https://arxiv.org/abs/2509.10884) | [Website](https://aigeeksgroup.github.io/Nav-R1/) | [Data](https://huggingface.co/datasets/AIGeeksGroup/Nav-CoT-110K) | [Models](https://huggingface.co/AIGeeksGroup/Nav-R1) | [HF Paper](https://huggingface.co/papers/2509.10884)
 
 
 https://github.com/user-attachments/assets/5eeb0e07-d5ea-483a-872c-b15f48838daa
@@ -18,6 +18,12 @@ https://github.com/user-attachments/assets/5eeb0e07-d5ea-483a-872c-b15f48838daa
 ## ✏️ Citation
 If you find our code or paper helpful, please consider starring ⭐ us and citing:
 ```bibtex
+@article{liu2025navr1,
+  title={Nav-R1: Reasoning and Navigation in Embodied Scenes},
+  author={Liu, Qingxiang and Huang, Ting and Zhang, Zeyu and Tang, Hao},
+  journal={arXiv preprint arXiv:2509.10884},
+  year={2025}
+}
 
 ```
 
