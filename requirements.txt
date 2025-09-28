@@ -1,0 +1,12 @@
+pyyaml==6.0.2
+pydantic==2.9.2
+numpy==2.1.1
+torch==2.3.1
+transformers==4.44.2
+accelerate==0.34.2
+rich==13.8.1
+loguru==0.7.2
+click==8.1.7
+datasets==2.21.0
+scikit-learn==1.5.2
+attrs==24.2.0

@@ -1,0 +1,25 @@
+benchmarks:
+  vln_r2r:
+    simulator:
+      name: habitat
+      max_episode_steps: 200
+      habitat_config: "/abs/path/to/benchmark/nav/vln_r2r.yaml"
+      action_map:
+        forward: move_forward
+        left: turn_left
+        right: turn_right
+        back: move_backward
+        turn_left: turn_left
+        stop: stop
+  objectnav_hm3d:
+    simulator:
+      name: habitat
+      max_episode_steps: 500
+      habitat_config: "/abs/path/to/benchmark/nav/objectnav/objectnav_hm3d.yaml"
+      action_map:
+        forward: move_forward
+        left: turn_left
+        right: turn_right
+        back: move_backward
+        turn_left: turn_left
+        stop: stop

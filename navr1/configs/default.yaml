@@ -1,0 +1,90 @@
+dataset:
+  name: Nav-CoT-110K
+  path: null
+  split: train
+  batch_size: 4
+  num_workers: 2
+  shuffle: true
+
+simulator:
+  name: habitat
+  max_episode_steps: 64
+  habitat_config: "/abs/path/to/habitat_pointnav.yaml"
+  action_map:
+    forward: move_forward
+    left: turn_left
+    right: turn_right
+    back: move_backward
+    turn_left: turn_left
+    stop: stop
+
+model:
+  vision_dim: 256
+  text_dim: 256
+  hidden_dim: 512
+  action_dim: 6
+  # 3D-R1 integration
+  use_3dr1_backbone: true
+  dr1_model_path: null  # Path to 3D-R1 model weights
+  freeze_3dr1_encoder: false
+
+sft:
+  learning_rate: 0.00005
+  batch_size: 8
+  epochs: 3
+  warmup_steps: 100
+  max_grad_norm: 1.0
+  save_steps: 500
+
+rl:
+  gamma: 0.99
+  lam: 0.95
+  learning_rate: 0.0003
+  batch_size: 8
+  epochs: 3
+  rollout_length: 64
+  format_coef: 0.2
+  understanding_coef: 0.3
+  navigation_coef: 0.5
+
+task_finetune:
+  vln_r2r:
+    learning_rate: 0.00002
+    batch_size: 4
+    epochs: 5
+    dataset_path: /abs/path/to/r2r_jsonl_dir
+    habitat_config: /abs/path/to/habitat_configs/vln/r2r_mp3d.yaml
+  vln_rxr:
+    learning_rate: 0.00002
+    batch_size: 4
+    epochs: 5
+    dataset_path: /abs/path/to/rxr_jsonl_dir
+    habitat_config: /abs/path/to/habitat_configs/vln/rxr_mp3d.yaml
+  objectnav_hm3d:
+    learning_rate: 0.00002
+    batch_size: 4
+    epochs: 5
+    dataset_path: /abs/path/to/hm3d_objectnav_jsonl_dir
+    habitat_config: /abs/path/to/habitat_configs/objectnav/hm3d.yaml
+  embodied_dialogue:
+    learning_rate: 0.00001
+    batch_size: 2
+    epochs: 3
+    dataset_path: /abs/path/to/3d_llm_dialogue_jsonl_dir
+  embodied_planning:
+    learning_rate: 0.00001
+    batch_size: 2
+    epochs: 3
+    dataset_path: /abs/path/to/3d_llm_planning_jsonl_dir
+  embodied_reasoning:
+    learning_rate: 0.00001
+    batch_size: 2
+    epochs: 3
+    dataset_path: /abs/path/to/sqa3d_jsonl_dir
+
+training:
+  stage: sft  # sft, rl, finetune
+  checkpoint_path: null
+  output_dir: "./runs/navr1"
+  save_best_model: true
+  early_stopping_patience: 3

@@ -34,6 +34,13 @@ Embodied navigation requires agents to integrate perception, reasoning, and acti
 
 ![image](./assets/Nav-R1-structure.png)
 
+
+## 📰 News
+
+<b>2025/09/19:</b> 🎉 Our paper has been shared by <a href="https://mp.weixin.qq.com/s/xvYpztXu15Nyt--BuOzCWw"><b>Embodied Intelligent Mind</b></a>.
+
+<b>2025/09/18:</b> 📌 Our paper has been promoted by <a href="https://mp.weixin.qq.com/s/2huKYeV82Vv7Q8HfiXS5FQ"><b>AIxiv</b></a>.
+
 ## TODO List
 
 - [x] Release Nav-CoT-110K dataset. (see [Nav-CoT-110K](https://huggingface.co/datasets/AIGeeksGroup/Nav-CoT-110K))
