@@ -38,7 +38,7 @@ Embodied navigation requires agents to integrate perception, reasoning, and acti
 
 - [x] Release Nav-CoT-110K dataset. (see [Nav-CoT-110K](https://huggingface.co/datasets/AIGeeksGroup/Nav-CoT-110K))
 - [x] Upload our paper to arXiv and build project pages.
-- [ ] Upload the code.
+- [x] Upload the code.
 - [ ] Add a demo on huggingface.
 
 ## ![YouTube](https://img.shields.io/badge/YouTube-%23FF0000.svg?style=for-the-badge&logo=YouTube&logoColor=white) YouTube Video
@@ -48,6 +48,37 @@ Embodied navigation requires agents to integrate perception, reasoning, and acti
 
 [![Watch the video](https://img.youtube.com/vi/JL7MCNHeor0/maxresdefault.jpg)](https://youtu.be/JL7MCNHeor0)
 
+## 🚀 Quickstart
+
+### Environment
+
+```bash
+conda create -n navr1 python=3.10 -y
+conda activate navr1
+pip install -r requirements.txt
+# Install Habitat-Lab and Habitat-Sim per official instructions for your OS/CUDA
+```
+
+### Dataset
+- You can download the `Nav-CoT-110K` from [huggingface](https://huggingface.co/datasets/AIGeeksGroup/Nav-CoT-110K) and set `dataset.path` to a folder containing `train.jsonl`, `val.jsonl`, `test.jsonl` with fields: `instruction`, `history_images`, `action_space`, `target`.
+
+Update `navr1/configs/default.yaml` or pass `--config` to scripts.
+
+### Train
+
+```bash
+python train.py --config navr1/configs/default.yaml --workdir runs/navr1
+```
+
+### Evaluate
+
+```bash
+python evaluate.py --config navr1/configs/default.yaml --split val --episodes 50
+```
+
+### Notes
+- Habitat-Lab Simulator is the sole supported simulation backend. Please ensure habitat-lab and habitat-sim are correctly installed, and that `simulator.habitat_config` points to your task YAML (such as VLN R2R or ObjectNav HM3D).
+  
 ## 👩🏻‍💻 Case Study
 
 ### Real-World
