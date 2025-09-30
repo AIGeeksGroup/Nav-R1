@@ -1,365 +1,503 @@
 """
-Supervised Fine-Tuning (SFT) trainer for Nav-R1 using Nav-CoT-110K dataset.
-This module implements the cold-start initialization phase using supervised learning.
+Supervised Fine-Tuning (SFT) Trainer for Nav-R1
 """
 
-import os
 import torch
 import torch.nn as nn
-import torch.optim as optim
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from typing import Dict, Any, Iterable, Optional
-from dataclasses import dataclass
-import json
-from pathlib import Path
-from loguru import logger
+from torch.optim import AdamW
+from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, get_linear_schedule_with_warmup
+import wandb
 from tqdm import tqdm
+import os
+import json
+from typing import Dict, List, Any, Optional, Tuple
+import numpy as np
+from accelerate import Accelerator
+from transformers import get_linear_schedule_with_warmup
 
-from navr1.config import NavR1Config, SFTConfig
-from navr1.models.policy import FastInSlowPolicy
-from navr1.datasets.nav_cot import build_dataloader
-
-
-class SFTLoss(nn.Module):
-    """Loss function for supervised fine-tuning"""
-    
-    def __init__(self, action_dim: int):
-        super().__init__()
-        self.action_dim = action_dim
-        self.ce_loss = nn.CrossEntropyLoss()
-        self.mse_loss = nn.MSELoss()
-    
-    def forward(self, logits: torch.Tensor, targets: torch.Tensor, 
-                slow_state: torch.Tensor, target_states: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
-        """
-        Compute SFT loss
-        
-        Args:
-            logits: Action logits from policy
-            targets: Target action indices
-            slow_state: Slow reasoning state
-            target_states: Optional target reasoning states
-            
-        Returns:
-            Dictionary of loss components
-        """
-        # Action prediction loss
-        action_loss = self.ce_loss(logits, targets)
-        
-        losses = {"action_loss": action_loss}
-        
-        # Optional reasoning state loss
-        if target_states is not None:
-            reasoning_loss = self.mse_loss(slow_state, target_states)
-            losses["reasoning_loss"] = reasoning_loss
-        
-        # Total loss
-        total_loss = action_loss
-        if "reasoning_loss" in losses:
-            total_loss += 0.1 * losses["reasoning_loss"]  # Weight reasoning loss
-        
-        losses["total_loss"] = total_loss
-        return losses
+from ..models.policy import NavR1Policy
+from ..datasets.nav_cot import NavCoTDataset, NavCoTDataLoader
+from ..utils.distributed import (
+    setup_distributed, cleanup_distributed, is_main_process, get_rank, get_world_size,
+    create_ddp_model, create_distributed_sampler, save_checkpoint_on_main_process,
+    load_checkpoint_on_main_process, broadcast_checkpoint, DistributedMetrics,
+    setup_logging, get_optimizer_state_dict, load_optimizer_state_dict
+)
 
 
-@dataclass
 class SFTTrainer:
-    """Supervised Fine-Tuning trainer for Nav-R1"""
+    """
+    Supervised Fine-Tuning trainer for Nav-R1
+    """
     
-    cfg: NavR1Config
-    policy: FastInSlowPolicy
-    output_dir: str
-    
-    def __post_init__(self):
-        self.sft_cfg = self.cfg.sft
-        self.device = self.policy.device
+    def __init__(
+        self,
+        model: NavR1Policy,
+        train_dataset: NavCoTDataset,
+        val_dataset: Optional[NavCoTDataset] = None,
+        config: Dict[str, Any] = None,
+        device: str = "cuda",
+        rank: int = 0,
+        world_size: int = 1,
+        use_ddp: bool = False,
+    ):
+        self.model = model
+        self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
+        self.config = config or {}
+        self.device = device
+        self.rank = rank
+        self.world_size = world_size
+        self.use_ddp = use_ddp
         
-        # Initialize loss function
-        self.loss_fn = SFTLoss(self.cfg.model.action_dim)
+        # Training configuration
+        self.batch_size = self.config.get("batch_size", 8)
+        self.learning_rate = self.config.get("learning_rate", 1e-5)
+        self.num_epochs = self.config.get("num_epochs", 10)
+        self.warmup_steps = self.config.get("warmup_steps", 1000)
+        self.weight_decay = self.config.get("weight_decay", 0.01)
+        self.gradient_accumulation_steps = self.config.get("gradient_accumulation_steps", 4)
+        self.max_grad_norm = self.config.get("max_grad_norm", 1.0)
+        self.save_steps = self.config.get("save_steps", 1000)
+        self.eval_steps = self.config.get("eval_steps", 500)
+        self.logging_steps = self.config.get("logging_steps", 100)
         
-        # Initialize optimizer
-        self.optimizer = self._setup_optimizer()
+        # Setup distributed training if enabled
+        if self.use_ddp:
+            setup_distributed(self.rank, self.world_size)
+            self.device = f"cuda:{self.rank}"
+            self.model = self.model.to(self.device)
+            self.model = create_ddp_model(self.model, device_ids=[self.rank])
+        else:
+            # Initialize accelerator for single GPU training
+            self.accelerator = Accelerator(
+                gradient_accumulation_steps=self.gradient_accumulation_steps,
+                mixed_precision="fp16" if self.config.get("mixed_precision", True) else "no",
+            )
+            self.model = self.accelerator.prepare(self.model)
         
-        # Initialize scheduler
-        self.scheduler = self._setup_scheduler()
+        # Initialize optimizer and scheduler
+        self.optimizer = None
+        self.scheduler = None
+        self._setup_optimizer()
+        
+        # Initialize data loaders
+        self.train_loader = None
+        self.val_loader = None
+        self._setup_data_loaders()
+        
+        # Loss functions
+        self.action_loss_fn = nn.CrossEntropyLoss()
+        self.reasoning_loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
         
         # Training state
         self.global_step = 0
-        self.best_loss = float('inf')
-        self.patience_counter = 0
+        self.epoch = 0
+        self.best_val_loss = float('inf')
         
-        # Create output directory
-        os.makedirs(self.output_dir, exist_ok=True)
+        # Distributed metrics
+        self.distributed_metrics = DistributedMetrics()
         
-        logger.info(f"SFT Trainer initialized with output directory: {self.output_dir}")
-    
-    def _setup_optimizer(self) -> optim.Optimizer:
-        """Setup optimizer for SFT training"""
-        # Get trainable parameters
-        if self.cfg.model.use_3dr1_backbone and self.cfg.model.freeze_3dr1_encoder:
-            # Only train policy components, not 3D-R1 backbone
-            params = (
-                list(self.policy.text_encoder.parameters()) +
-                list(self.policy.slow.parameters()) +
-                list(self.policy.fast.parameters())
+        # Logging
+        self.use_wandb = self.config.get("use_wandb", False)
+        if self.use_wandb and is_main_process():
+            wandb.init(
+                project=self.config.get("wandb_project", "navr1"),
+                name=self.config.get("experiment_name", "sft_experiment"),
+                config=self.config,
             )
-            if hasattr(self.policy, 'dr1_backbone') and self.policy.dr1_backbone is not None:
-                # Add trainable parts of 3D-R1 backbone (scene_encoder, spatial_reasoner)
-                params.extend(list(self.policy.dr1_backbone.scene_encoder.parameters()))
-                params.extend(list(self.policy.dr1_backbone.spatial_reasoner.parameters()))
+    
+    def _setup_optimizer(self):
+        """Setup optimizer and scheduler"""
+        # Get model parameters
+        if self.use_ddp:
+            model = self.model.module
         else:
-            # Train all parameters
-            params = list(self.policy.text_encoder.parameters()) + \
-                    list(self.policy.slow.parameters()) + \
-                    list(self.policy.fast.parameters())
-            if hasattr(self.policy, 'dr1_backbone') and self.policy.dr1_backbone is not None:
-                params.extend(list(self.policy.dr1_backbone.parameters()))
+            model = self.model
         
-        return optim.AdamW(params, lr=self.sft_cfg.learning_rate, weight_decay=0.01)
+        # Setup optimizer
+        self.optimizer = AdamW(
+            model.parameters(),
+            lr=self.learning_rate,
+            weight_decay=self.weight_decay,
+            betas=(0.9, 0.999),
+            eps=1e-8,
+        )
+        
+        # Calculate total training steps
+        if self.use_ddp:
+            # For distributed training, adjust batch size by world size
+            effective_batch_size = self.batch_size * self.world_size
+        else:
+            effective_batch_size = self.batch_size
+            
+        total_steps = len(self.train_dataset) // (effective_batch_size * self.gradient_accumulation_steps) * self.num_epochs
+        
+        # Setup scheduler
+        self.scheduler = get_linear_schedule_with_warmup(
+            self.optimizer,
+            num_warmup_steps=self.warmup_steps,
+            num_training_steps=total_steps,
+        )
     
-    def _setup_scheduler(self) -> Optional[optim.lr_scheduler.LRScheduler]:
-        """Setup learning rate scheduler"""
-        if self.sft_cfg.warmup_steps > 0:
-            return optim.lr_scheduler.LinearLR(
-                self.optimizer,
-                start_factor=0.1,
-                end_factor=1.0,
-                total_iters=self.sft_cfg.warmup_steps
+    def _setup_data_loaders(self):
+        """Setup data loaders"""
+        if self.use_ddp:
+            # Use distributed samplers for DDP
+            train_sampler = create_distributed_sampler(self.train_dataset, shuffle=True)
+            val_sampler = create_distributed_sampler(self.val_dataset, shuffle=False) if self.val_dataset else None
+            
+            # Train loader
+            train_loader = NavCoTDataLoader(
+                dataset=self.train_dataset,
+                batch_size=self.batch_size,
+                sampler=train_sampler,
+                num_workers=self.config.get("dataloader_num_workers", 4),
+                pin_memory=self.config.get("pin_memory", True),
+            ).get_dataloader()
+            
+            self.train_loader = train_loader
+            
+            # Validation loader
+            if self.val_dataset is not None:
+                val_loader = NavCoTDataLoader(
+                    dataset=self.val_dataset,
+                    batch_size=self.batch_size,
+                    sampler=val_sampler,
+                    num_workers=self.config.get("dataloader_num_workers", 4),
+                    pin_memory=self.config.get("pin_memory", True),
+                ).get_dataloader()
+                
+                self.val_loader = val_loader
+        else:
+            # Use accelerator for single GPU training
+            # Train loader
+            train_loader = NavCoTDataLoader(
+                dataset=self.train_dataset,
+                batch_size=self.batch_size,
+                shuffle=True,
+                num_workers=self.config.get("dataloader_num_workers", 4),
+                pin_memory=self.config.get("pin_memory", True),
+            ).get_dataloader()
+            
+            self.train_loader = self.accelerator.prepare(train_loader)
+            
+            # Validation loader
+            if self.val_dataset is not None:
+                val_loader = NavCoTDataLoader(
+                    dataset=self.val_dataset,
+                    batch_size=self.batch_size,
+                    shuffle=False,
+                    num_workers=self.config.get("dataloader_num_workers", 4),
+                    pin_memory=self.config.get("pin_memory", True),
+                ).get_dataloader()
+                
+                self.val_loader = self.accelerator.prepare(val_loader)
+    
+    def _compute_loss(
+        self,
+        batch: Dict[str, Any],
+        outputs: Dict[str, torch.Tensor],
+    ) -> Dict[str, torch.Tensor]:
+        """Compute training loss"""
+        losses = {}
+        
+        # Action prediction loss
+        action_logits = outputs["action_logits"]
+        # Convert action space to indices (simplified for demo)
+        action_targets = self._get_action_targets(batch["action_space"])
+        action_loss = self.action_loss_fn(action_logits, action_targets)
+        losses["action_loss"] = action_loss
+        
+        # Reasoning loss (if available)
+        if "reasoning_logits" in outputs and batch.get("cot_reasoning"):
+            reasoning_logits = outputs["reasoning_logits"]
+            reasoning_targets = self._get_reasoning_targets(batch["cot_reasoning"])
+            reasoning_loss = self.reasoning_loss_fn(
+                reasoning_logits.view(-1, reasoning_logits.size(-1)),
+                reasoning_targets.view(-1)
             )
-        return None
-    
-    def _prepare_batch(self, batch: Dict[str, Any]) -> Dict[str, Any]:
-        """Prepare batch for training"""
-        instructions = batch.get("instruction", [""])
-        action_space = batch.get("action_space", [["forward", "left", "right", "stop"]])
+            losses["reasoning_loss"] = reasoning_loss
         
-        # Create dummy targets for now (in real implementation, these would come from dataset)
-        batch_size = len(instructions)
-        targets = torch.zeros(batch_size, dtype=torch.long, device=self.device)
+        # Total loss
+        total_loss = losses["action_loss"]
+        if "reasoning_loss" in losses:
+            total_loss += 0.1 * losses["reasoning_loss"]  # Weight reasoning loss
+        losses["total_loss"] = total_loss
         
-        return {
-            "instructions": instructions,
-            "action_space": action_space,
-            "targets": targets
-        }
-    
-    def _compute_loss(self, batch: Dict[str, Any]) -> Dict[str, torch.Tensor]:
-        """Compute loss for a batch"""
-        # Forward pass
-        obs = {"batch": batch}
-        outputs = self.policy.forward(obs)
-        
-        logits = outputs["logits"]
-        slow_state = outputs["slow_state"]
-        targets = batch["targets"]
-        
-        # Compute loss
-        losses = self.loss_fn(logits, targets, slow_state)
         return losses
     
-    def train_step(self, batch: Dict[str, Any]) -> Dict[str, float]:
-        """Single training step"""
-        self.policy.train()
+    def _get_action_targets(self, action_spaces: List[List[str]]) -> torch.Tensor:
+        """Convert action spaces to target indices"""
+        # Simplified action mapping
+        action_mapping = {
+            "MOVE_FORWARD": 0,
+            "TURN_LEFT": 1,
+            "TURN_RIGHT": 2,
+            "STOP": 3,
+        }
         
-        # Prepare batch
-        prepared_batch = self._prepare_batch(batch)
-        
-        # Compute loss
-        losses = self._compute_loss(prepared_batch)
-        total_loss = losses["total_loss"]
-        
-        # Backward pass
-        self.optimizer.zero_grad()
-        total_loss.backward()
-        
-        # Gradient clipping
-        if self.sft_cfg.max_grad_norm > 0:
-            torch.nn.utils.clip_grad_norm_(
-                [p for p in self.optimizer.param_groups[0]['params'] if p.requires_grad],
-                self.sft_cfg.max_grad_norm
-            )
-        
-        self.optimizer.step()
-        
-        # Update scheduler
-        if self.scheduler is not None and self.global_step < self.sft_cfg.warmup_steps:
-            self.scheduler.step()
-        
-        self.global_step += 1
-        
-        # Return loss values
-        return {k: v.item() if isinstance(v, torch.Tensor) else v for k, v in losses.items()}
+        targets = []
+        for action_space in action_spaces:
+            # For simplicity, use the first action in the space
+            if action_space and action_space[0] in action_mapping:
+                targets.append(action_mapping[action_space[0]])
+            else:
+                targets.append(0)  # Default to MOVE_FORWARD
+                
+        return torch.tensor(targets, device=self.device)
     
-    def validate(self, dataloader: DataLoader) -> Dict[str, float]:
-        """Validation step"""
-        self.policy.eval()
+    def _get_reasoning_targets(self, cot_reasonings: List[str]) -> torch.Tensor:
+        """Convert CoT reasoning to target tokens"""
+        # This is a simplified implementation
+        # In practice, you would tokenize the reasoning text properly
+        targets = []
+        for reasoning in cot_reasonings:
+            # For now, create dummy targets
+            # In practice, you would tokenize the reasoning text
+            target_tokens = torch.randint(0, 1000, (512,))  # Dummy tokens
+            targets.append(target_tokens)
+            
+        return torch.stack(targets).to(self.device)
+    
+    def train_epoch(self) -> Dict[str, float]:
+        """Train for one epoch"""
+        self.model.train()
+        
+        # Set epoch for distributed sampler
+        if self.use_ddp and hasattr(self.train_loader.sampler, 'set_epoch'):
+            self.train_loader.sampler.set_epoch(self.epoch)
+        
+        total_losses = {}
+        num_batches = 0
+        
+        progress_bar = tqdm(
+            self.train_loader,
+            desc=f"Epoch {self.epoch}",
+            disable=not is_main_process(),
+        )
+        
+        for batch_idx, batch in enumerate(progress_bar):
+            # Move batch to device
+            if self.use_ddp:
+                batch = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+            
+            # Forward pass
+            outputs = self.model(
+                images=batch["images"],
+                input_ids=batch["input_ids"],
+                attention_mask=batch["attention_mask"],
+                image_mask=batch["image_mask"],
+                return_reasoning=True,
+            )
+            
+            # Compute loss
+            losses = self._compute_loss(batch, outputs)
+            
+            # Backward pass
+            if self.use_ddp:
+                losses["total_loss"].backward()
+            else:
+                self.accelerator.backward(losses["total_loss"])
+            
+            # Gradient clipping
+            if self.max_grad_norm > 0:
+                if self.use_ddp:
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
+                else:
+                    self.accelerator.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
+            
+            # Update parameters
+            if (batch_idx + 1) % self.gradient_accumulation_steps == 0:
+                self.optimizer.step()
+                self.scheduler.step()
+                self.optimizer.zero_grad()
+                self.global_step += 1
+                
+                # Logging
+                if self.global_step % self.logging_steps == 0:
+                    self._log_metrics(losses, "train")
+                
+                # Evaluation
+                if self.val_loader is not None and self.global_step % self.eval_steps == 0:
+                    val_metrics = self.evaluate()
+                    self._log_metrics(val_metrics, "val")
+                    
+                    # Save best model
+                    if val_metrics["val_total_loss"] < self.best_val_loss:
+                        self.best_val_loss = val_metrics["val_total_loss"]
+                        self.save_checkpoint(is_best=True)
+                
+                # Save checkpoint
+                if self.global_step % self.save_steps == 0:
+                    self.save_checkpoint()
+            
+            # Accumulate losses
+            for key, value in losses.items():
+                if key not in total_losses:
+                    total_losses[key] = 0.0
+                total_losses[key] += value.item()
+            num_batches += 1
+            
+            # Update progress bar
+            if is_main_process():
+                progress_bar.set_postfix({
+                    "loss": f"{losses['total_loss'].item():.4f}",
+                    "lr": f"{self.scheduler.get_last_lr()[0]:.2e}",
+                })
+        
+        # Average losses
+        for key in total_losses:
+            total_losses[key] /= num_batches
+            
+        return total_losses
+    
+    def evaluate(self) -> Dict[str, float]:
+        """Evaluate on validation set"""
+        if self.val_loader is None:
+            return {}
+            
+        self.model.eval()
         total_losses = {}
         num_batches = 0
         
         with torch.no_grad():
-            for batch in dataloader:
-                prepared_batch = self._prepare_batch(batch)
-                losses = self._compute_loss(prepared_batch)
+            for batch in tqdm(self.val_loader, desc="Evaluating", disable=not is_main_process()):
+                # Move batch to device
+                if self.use_ddp:
+                    batch = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
                 
-                for k, v in losses.items():
-                    if k not in total_losses:
-                        total_losses[k] = 0.0
-                    total_losses[k] += v.item() if isinstance(v, torch.Tensor) else v
+                # Forward pass
+                outputs = self.model(
+                    images=batch["images"],
+                    input_ids=batch["input_ids"],
+                    attention_mask=batch["attention_mask"],
+                    image_mask=batch["image_mask"],
+                    return_reasoning=True,
+                )
                 
+                # Compute loss
+                losses = self._compute_loss(batch, outputs)
+                
+                # Accumulate losses
+                for key, value in losses.items():
+                    if key not in total_losses:
+                        total_losses[key] = 0.0
+                    total_losses[key] += value.item()
                 num_batches += 1
         
         # Average losses
-        avg_losses = {k: v / num_batches for k, v in total_losses.items()}
-        return avg_losses
+        for key in total_losses:
+            total_losses[key] = total_losses[key] / num_batches
+            total_losses[f"val_{key}"] = total_losses.pop(key)
+            
+        return total_losses
     
-    def save_checkpoint(self, epoch: int, is_best: bool = False):
+    def train(self) -> Dict[str, float]:
+        """Train the model"""
+        print("Starting SFT training...")
+        
+        for epoch in range(self.num_epochs):
+            self.epoch = epoch
+            
+            # Train epoch
+            train_metrics = self.train_epoch()
+            
+            # Log epoch metrics
+            self._log_metrics(train_metrics, "train_epoch")
+            
+            # Final evaluation
+            if self.val_loader is not None:
+                val_metrics = self.evaluate()
+                self._log_metrics(val_metrics, "val_epoch")
+        
+        print("SFT training completed!")
+        
+        # Save final model
+        self.save_checkpoint(is_final=True)
+        
+        return train_metrics
+    
+    def _log_metrics(self, metrics: Dict[str, float], prefix: str = ""):
+        """Log metrics to wandb and console"""
+        if not is_main_process():
+            return
+            
+        # Add prefix to metrics
+        if prefix:
+            metrics = {f"{prefix}_{k}": v for k, v in metrics.items()}
+            
+        # Log to wandb
+        if self.use_wandb:
+            wandb.log(metrics, step=self.global_step)
+            
+        # Log to console
+        print(f"Step {self.global_step}: {metrics}")
+    
+    def save_checkpoint(self, is_best: bool = False, is_final: bool = False):
         """Save model checkpoint"""
+        if not is_main_process():
+            return
+            
+        save_dir = self.config.get("save_dir", "checkpoints")
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # Get model state dict
+        if self.use_ddp:
+            model_state_dict = self.model.module.state_dict()
+        else:
+            model_state_dict = self.accelerator.unwrap_model(self.model).state_dict()
+        
+        # Prepare checkpoint
         checkpoint = {
-            "epoch": epoch,
+            "model_state_dict": model_state_dict,
+            "optimizer_state_dict": get_optimizer_state_dict(self.optimizer),
+            "scheduler_state_dict": self.scheduler.state_dict(),
             "global_step": self.global_step,
-            "model_state_dict": {
-                "text_encoder": self.policy.text_encoder.state_dict(),
-                "slow": self.policy.slow.state_dict(),
-                "fast": self.policy.fast.state_dict(),
-            },
-            "optimizer_state_dict": self.optimizer.state_dict(),
-            "scheduler_state_dict": self.scheduler.state_dict() if self.scheduler else None,
+            "epoch": self.epoch,
+            "best_val_loss": self.best_val_loss,
+            "config": self.config,
         }
         
-        # Add 3D-R1 backbone state if present
-        if hasattr(self.policy, 'dr1_backbone') and self.policy.dr1_backbone is not None:
-            checkpoint["model_state_dict"]["dr1_backbone"] = self.policy.dr1_backbone.state_dict()
-        
         # Save checkpoint
-        checkpoint_path = os.path.join(self.output_dir, f"checkpoint_epoch_{epoch}.pt")
-        torch.save(checkpoint, checkpoint_path)
-        
         if is_best:
-            best_path = os.path.join(self.output_dir, "best_model.pt")
-            torch.save(checkpoint, best_path)
-            logger.info(f"Best model saved to {best_path}")
-        
-        logger.info(f"Checkpoint saved to {checkpoint_path}")
+            checkpoint_path = os.path.join(save_dir, "best_model.pt")
+        elif is_final:
+            checkpoint_path = os.path.join(save_dir, "final_model.pt")
+        else:
+            checkpoint_path = os.path.join(save_dir, f"checkpoint_step_{self.global_step}.pt")
+            
+        save_checkpoint_on_main_process(checkpoint, checkpoint_path)
     
     def load_checkpoint(self, checkpoint_path: str):
         """Load model checkpoint"""
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
-        
+        checkpoint = load_checkpoint_on_main_process(checkpoint_path)
+        if checkpoint is None:
+            return
+            
         # Load model state
-        self.policy.text_encoder.load_state_dict(checkpoint["model_state_dict"]["text_encoder"])
-        self.policy.slow.load_state_dict(checkpoint["model_state_dict"]["slow"])
-        self.policy.fast.load_state_dict(checkpoint["model_state_dict"]["fast"])
+        if self.use_ddp:
+            self.model.module.load_state_dict(checkpoint["model_state_dict"])
+        else:
+            self.accelerator.unwrap_model(self.model).load_state_dict(checkpoint["model_state_dict"])
         
-        # Load 3D-R1 backbone if present
-        if "dr1_backbone" in checkpoint["model_state_dict"] and \
-           hasattr(self.policy, 'dr1_backbone') and self.policy.dr1_backbone is not None:
-            self.policy.dr1_backbone.load_state_dict(checkpoint["model_state_dict"]["dr1_backbone"])
-        
-        # Load optimizer state
-        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        
-        # Load scheduler state
-        if self.scheduler and checkpoint.get("scheduler_state_dict"):
+        # Load optimizer and scheduler state
+        if "optimizer_state_dict" in checkpoint:
+            load_optimizer_state_dict(self.optimizer, checkpoint["optimizer_state_dict"])
+        if "scheduler_state_dict" in checkpoint:
             self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
-        
+            
         # Load training state
         self.global_step = checkpoint.get("global_step", 0)
+        self.epoch = checkpoint.get("epoch", 0)
+        self.best_val_loss = checkpoint.get("best_val_loss", float('inf'))
         
-        logger.info(f"Checkpoint loaded from {checkpoint_path}")
+        if is_main_process():
+            print(f"Loaded checkpoint from {checkpoint_path}")
     
-    def train(self, train_dataloader: DataLoader, val_dataloader: Optional[DataLoader] = None):
-        """Main training loop"""
-        logger.info("Starting SFT training...")
-        
-        for epoch in range(self.sft_cfg.epochs):
-            logger.info(f"Epoch {epoch + 1}/{self.sft_cfg.epochs}")
-            
-            # Training phase
-            train_losses = {}
-            num_train_batches = 0
-            
-            progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch + 1}")
-            for batch in progress_bar:
-                step_losses = self.train_step(batch)
-                
-                # Accumulate losses
-                for k, v in step_losses.items():
-                    if k not in train_losses:
-                        train_losses[k] = 0.0
-                    train_losses[k] += v
-                
-                num_train_batches += 1
-                
-                # Update progress bar
-                progress_bar.set_postfix({
-                    "loss": f"{step_losses['total_loss']:.4f}",
-                    "lr": f"{self.optimizer.param_groups[0]['lr']:.6f}"
-                })
-                
-                # Save checkpoint periodically
-                if self.global_step % self.sft_cfg.save_steps == 0:
-                    self.save_checkpoint(epoch)
-            
-            # Average training losses
-            avg_train_losses = {k: v / num_train_batches for k, v in train_losses.items()}
-            logger.info(f"Epoch {epoch + 1} - Train losses: {avg_train_losses}")
-            
-            # Validation phase
-            if val_dataloader is not None:
-                val_losses = self.validate(val_dataloader)
-                logger.info(f"Epoch {epoch + 1} - Val losses: {val_losses}")
-                
-                # Check for best model
-                val_loss = val_losses["total_loss"]
-                is_best = val_loss < self.best_loss
-                if is_best:
-                    self.best_loss = val_loss
-                    self.patience_counter = 0
-                else:
-                    self.patience_counter += 1
-                
-                # Save best model
-                self.save_checkpoint(epoch, is_best=is_best)
-                
-                # Early stopping
-                if self.patience_counter >= self.cfg.training.early_stopping_patience:
-                    logger.info(f"Early stopping triggered after {epoch + 1} epochs")
-                    break
-            else:
-                # Save checkpoint without validation
-                self.save_checkpoint(epoch)
-        
-        logger.info("SFT training completed!")
-
-
-def train_sft(cfg: NavR1Config, output_dir: str, 
-              checkpoint_path: Optional[str] = None) -> FastInSlowPolicy:
-    """
-    Train Nav-R1 using supervised fine-tuning on Nav-CoT-110K dataset
-    
-    Args:
-        cfg: Nav-R1 configuration
-        output_dir: Output directory for checkpoints
-        checkpoint_path: Optional path to resume from checkpoint
-        
-    Returns:
-        Trained policy model
-    """
-    # Initialize policy
-    policy = FastInSlowPolicy(cfg.model)
-    
-    # Initialize trainer
-    trainer = SFTTrainer(cfg, policy, output_dir)
-    
-    # Load checkpoint if provided
-    if checkpoint_path and os.path.exists(checkpoint_path):
-        trainer.load_checkpoint(checkpoint_path)
-    
-    # Build dataloaders
-    train_dataloader = build_dataloader(cfg.dataset, split="train")
-    val_dataloader = build_dataloader(cfg.dataset, split="val")
-    
-    # Train
-    trainer.train(train_dataloader, val_dataloader)
-    
-    return policy
+    def cleanup(self):
+        """Clean up distributed training resources"""
+        if self.use_ddp:
+            cleanup_distributed()

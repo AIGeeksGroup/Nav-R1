@@ -1,8 +1,8 @@
-from typing import Any
+"""
+Simulator modules for Nav-R1
+"""
 
 from .habitat import HabitatSimulator
-from navr1.config import SimulatorConfig
+from .habitat_stub import HabitatStubSimulator
 
-
-def build_simulator(cfg: SimulatorConfig) -> Any:
-    return HabitatSimulator(cfg)
+__all__ = ["HabitatSimulator", "HabitatStubSimulator"]

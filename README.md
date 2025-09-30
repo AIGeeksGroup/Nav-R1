@@ -73,18 +73,82 @@ Update `navr1/configs/default.yaml` or pass `--config` to scripts.
 
 ### Train
 
+#### Supervised Fine-Tuning (SFT)
 ```bash
-python train.py --config navr1/configs/default.yaml --workdir runs/navr1
+# SFT training (4 GPUs)
+python train.py --config navr1/configs/default.yaml --mode sft --workdir runs/navr1 --num_gpus 4 --use_ddp
+```
+#### Reinforcement Learning (RL) Training
+```bash
+
+# Multi-GPU RL training with SFT checkpoint (8 GPUs)
+python train.py --config navr1/configs/default.yaml --mode rl --resume runs/navr1/sft_checkpoint.pt --workdir runs/navr1_rl --num_gpus 8 --use_ddp
+```
+
+#### Embodied Tasks Training (on RL weights)
+```bash
+# Embodied Tasks Training with RL checkpoint
+python train.py --config navr1/configs/default.yaml --mode embodied --embodied_task dialogue --resume runs/navr1_rl/rl_checkpoint.pt --workdir runs/navr1_dialogue --num_gpus 4 --use_ddp
+
+python train.py --config navr1/configs/default.yaml --mode embodied --embodied_task reasoning --resume runs/navr1_rl/rl_checkpoint.pt --workdir runs/navr1_reasoning --num_gpus 4 --use_ddp
+
+python train.py --config navr1/configs/default.yaml --mode embodied --embodied_task planning --resume runs/navr1_rl/rl_checkpoint.pt --workdir runs/navr1_planning --num_gpus 4 --use_ddp
+
+python train.py --config navr1/configs/default.yaml --mode embodied --embodied_task vln --resume runs/navr1_rl/rl_checkpoint.pt --workdir runs/navr1_vln_embodied --num_gpus 4 --use_ddp
+
+python train.py --config navr1/configs/default.yaml --mode embodied --embodied_task objectnav --resume runs/navr1_rl/rl_checkpoint.pt --workdir runs/navr1_objectnav_embodied --num_gpus 4 --use_ddp
+```
+
+#### Complete Training Pipeline
+```bash
+# Run complete 3-stage pipeline (SFT → RL → Embodied Tasks)
+python train_pipeline.py --config navr1/configs/default.yaml --workdir runs/navr1_pipeline
+
+# Run specific stages
+python train_pipeline.py --config navr1/configs/default.yaml --stage sft --workdir runs/navr1_pipeline
+python train_pipeline.py --config navr1/configs/default.yaml --stage rl --workdir runs/navr1_pipeline
+python train_pipeline.py --config navr1/configs/default.yaml --stage embodied_finetune --embodied_task dialogue --workdir runs/navr1_pipeline
 ```
 
 ### Evaluate
 
 ```bash
+# Evaluate on validation set
 python evaluate.py --config navr1/configs/default.yaml --split val --episodes 50
+
+# Evaluate on test set
+python evaluate.py --config navr1/configs/default.yaml --split test --episodes 100
+
+# Evaluate with specific checkpoint
+python evaluate.py --config navr1/configs/default.yaml --checkpoint runs/navr1/checkpoint.pt --split val --episodes 50
+```
+
+#### Task-Specific Evaluation
+```bash
+# Evaluate VLN model
+python evaluate.py --config navr1/configs/default.yaml --checkpoint runs/navr1_vln/checkpoint.pt --task_type vln --split val --episodes 50
+
+# Evaluate ObjectNav model
+python evaluate.py --config navr1/configs/default.yaml --checkpoint runs/navr1_objectnav/checkpoint.pt --task_type objectnav --split val --episodes 50
+
+# Evaluate 3D scene understanding models
+python evaluate.py --config navr1/configs/default.yaml --checkpoint runs/navr1_scanrefer/checkpoint.pt --task_type scanrefer --split val --episodes 50
+python evaluate.py --config navr1/configs/default.yaml --checkpoint runs/navr1_scanqa/checkpoint.pt --task_type scanqa --split val --episodes 50
+python evaluate.py --config navr1/configs/default.yaml --checkpoint runs/navr1_nr3d/checkpoint.pt --task_type nr3d --split val --episodes 50
+python evaluate.py --config navr1/configs/default.yaml --checkpoint runs/navr1_scene30k/checkpoint.pt --task_type scene30k --split val --episodes 50
+
+# Evaluate embodied task models
+python evaluate.py --config navr1/configs/default.yaml --checkpoint runs/navr1_dialogue/checkpoint.pt --task_type dialogue --split val --episodes 50
+python evaluate.py --config navr1/configs/default.yaml --checkpoint runs/navr1_reasoning/checkpoint.pt --task_type reasoning --split val --episodes 50
+python evaluate.py --config navr1/configs/default.yaml --checkpoint runs/navr1_planning/checkpoint.pt --task_type planning --split val --episodes 50
 ```
 
 ### Notes
 - Habitat-Lab Simulator is the sole supported simulation backend. Please ensure habitat-lab and habitat-sim are correctly installed, and that `simulator.habitat_config` points to your task YAML (such as VLN R2R or ObjectNav HM3D).
+- For 3D scene understanding tasks, ensure you have the required datasets (ScanRefer, ScanQA, Nr3D, Scene-30K) downloaded and properly configured.
+- RL training requires significant computational resources. Consider using multiple GPUs and adjusting batch sizes accordingly.
+- The model supports both CPU and GPU training, but GPU is strongly recommended for reasonable training times.
+- Multi-GPU training is highly recommended for large-scale training and can provide 3-8x speedup depending on the number of GPUs.
   
 ## 👩🏻‍💻 Case Study
 

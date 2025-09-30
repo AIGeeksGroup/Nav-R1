@@ -1,242 +1,397 @@
+#!/usr/bin/env python3
 """
-Complete training pipeline for Nav-R1 multi-stage training:
-1. 3D-R1 backbone initialization
-2. Nav-CoT-110K SFT (cold-start)
-3. GRPO RL training
-4. Task-specific fine-tuning
+Complete training pipeline for Nav-R1
 """
 
+import argparse
 import os
-import sys
 import yaml
-import click
-from rich.console import Console
-from loguru import logger
-from pathlib import Path
+import torch
+from typing import Dict, Any
+import json
+from datetime import datetime
 
-from navr1.config import NavR1Config, load_config
-from navr1.datasets.nav_cot import build_dataloader
-from navr1.simulators import build_simulator
-from navr1.models.policy import FastInSlowPolicy
-from navr1.training.sft_trainer import train_sft
-from navr1.training.task_finetune import (
-    finetune_vln_r2r, finetune_vln_rxr, finetune_objectnav_hm3d,
-    finetune_embodied_dialogue, finetune_embodied_planning, finetune_embodied_reasoning
-)
+from navr1.models.policy import NavR1Policy
+from navr1.datasets.nav_cot import create_nav_cot_dataset
+from navr1.datasets import create_embodied_dataset, create_embodied_dataloader
+from navr1.training.sft_trainer import SFTTrainer
 from navr1.rl.grpo import GRPOTrainer
-
-console = Console()
-
-
-def run_sft_stage(cfg: NavR1Config, workdir: str) -> str:
-    """Run SFT (Supervised Fine-Tuning) stage"""
-    console.rule("[bold green]Stage 1: SFT Training on Nav-CoT-110K")
-    
-    sft_output_dir = os.path.join(workdir, "sft")
-    os.makedirs(sft_output_dir, exist_ok=True)
-    
-    logger.info("Starting SFT training...")
-    policy = train_sft(cfg, sft_output_dir)
-    
-    # Return path to best SFT model
-    best_sft_path = os.path.join(sft_output_dir, "best_model.pt")
-    if os.path.exists(best_sft_path):
-        logger.info(f"SFT training completed. Best model saved to: {best_sft_path}")
-        return best_sft_path
-    else:
-        logger.warning("SFT training completed but best model not found")
-        return os.path.join(sft_output_dir, "checkpoint_epoch_0.pt")
+from navr1.simulators.habitat import HabitatSimulator, HabitatStubSimulator
 
 
-def run_grpo_stage(cfg: NavR1Config, workdir: str, sft_checkpoint_path: str) -> str:
-    """Run GRPO RL training stage"""
-    console.rule("[bold blue]Stage 2: GRPO RL Training")
+def load_config(config_path: str) -> Dict[str, Any]:
+    """Load configuration from YAML file"""
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    return config
+
+
+def create_model(config: Dict[str, Any]) -> NavR1Policy:
+    """Create Nav-R1 model from configuration"""
+    model_config = config["model"]
     
-    grpo_output_dir = os.path.join(workdir, "grpo")
-    os.makedirs(grpo_output_dir, exist_ok=True)
+    # Vision encoder config
+    vision_config = {
+        "model_name": model_config["vision_encoder"]["type"],
+        "pretrained_path": model_config["vision_encoder"].get("pretrained_path"),
+        "freeze_vision": model_config["vision_encoder"].get("freeze_vision", False),
+        "image_size": config["dataset"]["image_size"],
+        "hidden_size": model_config["multimodal_fusion"]["hidden_size"],
+    }
     
-    # Initialize policy and simulator
-    policy = FastInSlowPolicy(cfg.model)
-    sim = build_simulator(cfg.simulator)
+    # Language encoder config
+    language_config = {
+        "model_name": model_config["language_model"]["type"],
+        "pretrained_path": model_config["language_model"].get("pretrained_path"),
+        "freeze_lm": model_config["language_model"].get("freeze_lm", False),
+        "hidden_size": model_config["multimodal_fusion"]["hidden_size"],
+    }
     
-    # Initialize GRPO trainer
-    trainer = GRPOTrainer(cfg.rl, policy, sim, cfg, grpo_output_dir)
+    # Fusion config
+    fusion_config = model_config["multimodal_fusion"]
     
-    # Load SFT checkpoint
-    trainer.load_sft_checkpoint(sft_checkpoint_path)
+    # Policy config
+    policy_config = model_config["policy_head"]
     
-    # Build dataloader for RL training
-    dataloader = build_dataloader(cfg.dataset)
+    # Reasoning config (optional)
+    reasoning_config = None
+    if "reasoning_head" in model_config:
+        reasoning_config = model_config["reasoning_head"]
+    
+    # Create backbone config
+    backbone_config = {
+        "vision_config": vision_config,
+        "language_config": language_config,
+        "fusion_config": fusion_config,
+    }
+    
+    # Create model
+    model = NavR1Policy(
+        backbone_config=backbone_config,
+        policy_config=policy_config,
+        reasoning_config=reasoning_config,
+    )
+    
+    return model
+
+
+def create_simulator(config: Dict[str, Any]) -> HabitatSimulator:
+    """Create simulator from configuration"""
+    simulator_config = config["simulator"]
+    
+    try:
+        simulator = HabitatSimulator(
+            config_path=simulator_config["habitat_config"],
+            scene_dataset_path=simulator_config["scene_dataset"],
+            episode_dataset_path=simulator_config["episode_dataset"],
+            max_episode_steps=simulator_config["max_episode_steps"],
+            success_reward=simulator_config["success_reward"],
+            step_penalty=simulator_config["step_penalty"],
+            collision_penalty=simulator_config["collision_penalty"],
+            device=config["hardware"]["device"],
+        )
+    except ImportError:
+        print("Warning: Habitat not available, using stub simulator")
+        simulator = HabitatStubSimulator(
+            config_path=simulator_config["habitat_config"],
+            scene_dataset_path=simulator_config["scene_dataset"],
+            episode_dataset_path=simulator_config["episode_dataset"],
+            max_episode_steps=simulator_config["max_episode_steps"],
+            success_reward=simulator_config["success_reward"],
+            step_penalty=simulator_config["step_penalty"],
+            collision_penalty=simulator_config["collision_penalty"],
+            device=config["hardware"]["device"],
+        )
+    
+    return simulator
+
+
+def stage1_sft_training(config: Dict[str, Any], workdir: str) -> str:
+    """Stage 1: Supervised Fine-Tuning on Nav-CoT-110K"""
+    print("=" * 60)
+    print("Stage 1: Supervised Fine-Tuning (SFT)")
+    print("=" * 60)
+    
+    # Create model
+    model = create_model(config)
+    
+    # Create datasets
+    train_dataset = create_nav_cot_dataset(
+        data_path=config["dataset"]["path"],
+        split="train",
+        max_sequence_length=config["dataset"]["max_sequence_length"],
+        max_images=config["dataset"]["max_images"],
+        image_size=config["dataset"]["image_size"],
+        tokenizer_name=config["dataset"]["tokenizer"]["type"],
+    )
+    
+    val_dataset = create_nav_cot_dataset(
+        data_path=config["dataset"]["path"],
+        split="val",
+        max_sequence_length=config["dataset"]["max_sequence_length"],
+        max_images=config["dataset"]["max_images"],
+        image_size=config["dataset"]["image_size"],
+        tokenizer_name=config["dataset"]["tokenizer"]["type"],
+    )
+    
+    # Create trainer
+    trainer = SFTTrainer(
+        model=model,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
+        config=config["training"],
+        device=config["hardware"]["device"],
+    )
     
     # Train
-    logger.info("Starting GRPO RL training...")
-    trainer.train(dataloader)
+    trainer.train()
     
-    # Return path to best GRPO model
-    best_grpo_path = os.path.join(grpo_output_dir, "best_grpo_model.pt")
-    if os.path.exists(best_grpo_path):
-        logger.info(f"GRPO training completed. Best model saved to: {best_grpo_path}")
-        return best_grpo_path
-    else:
-        logger.warning("GRPO training completed but best model not found")
-        return os.path.join(grpo_output_dir, "grpo_checkpoint_epoch_0.pt")
+    # Save checkpoint
+    checkpoint_path = os.path.join(workdir, "sft_checkpoint.pt")
+    trainer.save_checkpoint(is_final=True)
+    
+    print(f"SFT training completed! Checkpoint saved to {checkpoint_path}")
+    return checkpoint_path
 
 
-def run_task_finetune_stage(cfg: NavR1Config, workdir: str, grpo_checkpoint_path: str, 
-                           tasks: list) -> dict:
-    """Run task-specific fine-tuning stage"""
-    console.rule("[bold magenta]Stage 3: Task-Specific Fine-tuning")
-    
-    task_results = {}
-    
-    for task in tasks:
-        console.print(f"[bold yellow]Fine-tuning on {task}...")
-        
-        task_output_dir = os.path.join(workdir, f"finetune_{task}")
-        os.makedirs(task_output_dir, exist_ok=True)
-        
-        try:
-            if task == "vln_r2r":
-                policy = finetune_vln_r2r(cfg, task_output_dir, grpo_checkpoint_path)
-            elif task == "vln_rxr":
-                policy = finetune_vln_rxr(cfg, task_output_dir, grpo_checkpoint_path)
-            elif task == "objectnav_hm3d":
-                policy = finetune_objectnav_hm3d(cfg, task_output_dir, grpo_checkpoint_path)
-            elif task == "embodied_dialogue":
-                policy = finetune_embodied_dialogue(cfg, task_output_dir, grpo_checkpoint_path)
-            elif task == "embodied_planning":
-                policy = finetune_embodied_planning(cfg, task_output_dir, grpo_checkpoint_path)
-            elif task == "embodied_reasoning":
-                policy = finetune_embodied_reasoning(cfg, task_output_dir, grpo_checkpoint_path)
-            else:
-                logger.error(f"Unknown task: {task}")
-                continue
-            
-            # Save path to best model
-            best_model_path = os.path.join(task_output_dir, f"best_{task}_model.pt")
-            task_results[task] = {
-                "success": True,
-                "model_path": best_model_path,
-                "output_dir": task_output_dir
-            }
-            
-            logger.info(f"Task {task} fine-tuning completed successfully")
-            
-        except Exception as e:
-            logger.error(f"Task {task} fine-tuning failed: {e}")
-            task_results[task] = {
-                "success": False,
-                "error": str(e),
-                "output_dir": task_output_dir
-            }
-    
-    return task_results
 
 
-@click.command()
-@click.option("--config", "config_path", type=click.Path(exists=True), 
-              default="navr1/configs/default.yaml", help="Path to config file")
-@click.option("--workdir", type=click.Path(), default="./runs/navr1_pipeline", 
-              help="Working directory for training outputs")
-@click.option("--stages", type=click.Choice(["sft", "grpo", "finetune", "all"]), 
-              default="all", help="Training stages to run")
-@click.option("--tasks", type=str, default="vln_r2r,vln_rxr,objectnav_hm3d,embodied_dialogue,embodied_planning,embodied_reasoning",
-              help="Comma-separated list of tasks for fine-tuning")
-@click.option("--sft-checkpoint", type=click.Path(), default=None,
-              help="Path to SFT checkpoint to resume from")
-@click.option("--grpo-checkpoint", type=click.Path(), default=None,
-              help="Path to GRPO checkpoint to resume from")
-@click.option("--seed", type=int, default=42, help="Random seed")
-@click.option("--rl-task", type=click.Choice(["auto", "vln_r2r", "vln_rxr", "objectnav_hm3d"]), default="auto",
-              help="Which task's Habitat config to use during GRPO training (auto uses cfg.simulator.habitat_config)")
-def main(config_path: str, workdir: str, stages: str, tasks: str, 
-         sft_checkpoint: str, grpo_checkpoint: str, seed: int, rl_task: str):
-    """
-    Nav-R1 Multi-Stage Training Pipeline
+def stage3_embodied_finetune(config: Dict[str, Any], workdir: str, rl_checkpoint: str) -> str:
+    """Stage 3: Embodied Task Fine-tuning on RL weights"""
+    print("=" * 60)
+    print("Stage 3: Embodied Task Fine-tuning (on RL weights)")
+    print("=" * 60)
     
-    This script runs the complete training pipeline for Nav-R1:
-    1. SFT training on Nav-CoT-110K dataset
-    2. GRPO RL training
-    3. Task-specific fine-tuning on various benchmarks
-    """
+    # Create model and load RL checkpoint
+    model = create_model(config)
+    if os.path.exists(rl_checkpoint):
+        checkpoint = torch.load(rl_checkpoint, map_location="cpu")
+        if "model_state_dict" in checkpoint:
+            model.load_state_dict(checkpoint["model_state_dict"])
+        else:
+            model.load_state_dict(checkpoint)
+        print(f"Loaded RL checkpoint from {rl_checkpoint}")
     
-    # Set random seed
-    import torch
-    import numpy as np
-    torch.manual_seed(seed)
-    np.random.seed(seed)
+    # Create embodied task datasets
+    embodied_task = config.get("embodied_task", "dialogue")
+    task_config = config["embodied_tasks"][embodied_task]
     
-    # Load configuration
-    cfg: NavR1Config = load_config(config_path)
+    train_dataset = create_embodied_dataset(
+        task_type=task_config["dataset_name"],
+        data_path=task_config["data_path"],
+        split="train",
+        max_sequence_length=task_config["max_sequence_length"],
+        max_images=task_config["max_images"],
+        image_size=task_config["image_size"],
+    )
+    
+    val_dataset = create_embodied_dataset(
+        task_type=task_config["dataset_name"],
+        data_path=task_config["data_path"],
+        split="val",
+        max_sequence_length=task_config["max_sequence_length"],
+        max_images=task_config["max_images"],
+        image_size=task_config["image_size"],
+    )
+    
+    # Create trainer
+    trainer_config = config["training"].copy()
+    trainer_config["task_type"] = embodied_task
+    
+    trainer = SFTTrainer(
+        model=model,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
+        config=trainer_config,
+        device=config["hardware"]["device"],
+    )
+    
+    # Train
+    trainer.train()
+    
+    # Save checkpoint
+    checkpoint_path = os.path.join(workdir, f"embodied_finetune_{embodied_task}_checkpoint.pt")
+    trainer.save_checkpoint(is_final=True)
+    
+    print(f"Embodied task fine-tuning completed! Checkpoint saved to {checkpoint_path}")
+    return checkpoint_path
+
+
+def stage2_rl_training(config: Dict[str, Any], workdir: str, sft_checkpoint: str) -> str:
+    """Stage 2: Reinforcement Learning with GRPO"""
+    print("=" * 60)
+    print("Stage 2: Reinforcement Learning (GRPO)")
+    print("=" * 60)
+    
+    # Create model and load SFT checkpoint
+    model = create_model(config)
+    if os.path.exists(sft_checkpoint):
+        checkpoint = torch.load(sft_checkpoint, map_location="cpu")
+        if "model_state_dict" in checkpoint:
+            model.load_state_dict(checkpoint["model_state_dict"])
+        else:
+            model.load_state_dict(checkpoint)
+        print(f"Loaded SFT checkpoint from {sft_checkpoint}")
+    
+    # Create simulator
+    simulator = create_simulator(config)
+    
+    # Create trainer
+    trainer = GRPOTrainer(
+        model=model,
+        simulator=simulator,
+        config=config["rl"],
+        device=config["hardware"]["device"],
+    )
+    
+    # Train
+    trainer.train()
+    
+    # Save checkpoint
+    checkpoint_path = os.path.join(workdir, "rl_checkpoint.pt")
+    trainer.save_checkpoint(is_final=True)
+    
+    print(f"RL training completed! Checkpoint saved to {checkpoint_path}")
+    return checkpoint_path
+
+
+def run_complete_pipeline(config: Dict[str, Any], workdir: str):
+    """Run the complete training pipeline"""
+    print("Starting Nav-R1 Complete Training Pipeline")
+    print("=" * 60)
+    
+    # Create work directory
     os.makedirs(workdir, exist_ok=True)
     
-    # Setup logging
-    logger.add(os.path.join(workdir, "pipeline.log"))
-    logger.info(f"Nav-R1 Training Pipeline started with config: {config_path}")
-    logger.info(f"Working directory: {workdir}")
-    logger.info(f"Stages to run: {stages}")
+    # Save configuration
+    config_path = os.path.join(workdir, "config.yaml")
+    with open(config_path, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False)
     
-    # Parse tasks
-    task_list = [task.strip() for task in tasks.split(",")]
-    logger.info(f"Tasks for fine-tuning: {task_list}")
+    # Training log
+    training_log = {
+        "start_time": datetime.now().isoformat(),
+        "stages": [],
+        "checkpoints": {},
+    }
     
-    # Stage 1: SFT Training
-    sft_checkpoint_path = sft_checkpoint
-    if stages in ["sft", "all"]:
-        if sft_checkpoint_path is None:
-            sft_checkpoint_path = run_sft_stage(cfg, workdir)
+    try:
+        # Stage 1: SFT Training
+        sft_checkpoint = stage1_sft_training(config, workdir)
+        training_log["stages"].append("sft_completed")
+        training_log["checkpoints"]["sft"] = sft_checkpoint
+        
+        # Stage 2: RL Training
+        rl_checkpoint = stage2_rl_training(config, workdir, sft_checkpoint)
+        training_log["stages"].append("rl_completed")
+        training_log["checkpoints"]["rl"] = rl_checkpoint
+        
+        # Stage 3: Embodied Task Fine-tuning (on RL weights)
+        embodied_checkpoint = stage3_embodied_finetune(config, workdir, rl_checkpoint)
+        training_log["stages"].append("embodied_finetune_completed")
+        training_log["checkpoints"]["embodied_finetune"] = embodied_checkpoint
+        
+        # Final evaluation
+        print("=" * 60)
+        print("Final Evaluation")
+        print("=" * 60)
+        
+        # Load final model
+        model = create_model(config)
+        checkpoint = torch.load(embodied_checkpoint, map_location="cpu")
+        if "model_state_dict" in checkpoint:
+            model.load_state_dict(checkpoint["model_state_dict"])
         else:
-            logger.info(f"Using provided SFT checkpoint: {sft_checkpoint_path}")
-    
-    # Stage 2: GRPO RL Training
-    grpo_checkpoint_path = grpo_checkpoint
-    if stages in ["grpo", "all"]:
-        if grpo_checkpoint_path is None:
-            if sft_checkpoint_path is None:
-                logger.error("SFT checkpoint is required for GRPO training")
-                return
-            # If user specified a target task for RL env, switch Habitat YAML accordingly
-            if rl_task in ["vln_r2r", "vln_rxr", "objectnav_hm3d"]:
-                task_cfg = getattr(cfg.task_finetune, rl_task, {}) if hasattr(cfg, 'task_finetune') else {}
-                hcfg = task_cfg.get("habitat_config") if isinstance(task_cfg, dict) else None
-                if hcfg:
-                    logger.info(f"Using task-specific Habitat config for RL: {hcfg}")
-                    cfg.simulator.habitat_config = hcfg
-                else:
-                    logger.warning(f"No habitat_config found under task_finetune.{rl_task}. Using cfg.simulator.habitat_config: {cfg.simulator.habitat_config}")
-            grpo_checkpoint_path = run_grpo_stage(cfg, workdir, sft_checkpoint_path)
-        else:
-            logger.info(f"Using provided GRPO checkpoint: {grpo_checkpoint_path}")
-    
-    # Stage 3: Task-Specific Fine-tuning
-    if stages in ["finetune", "all"]:
-        if grpo_checkpoint_path is None:
-            logger.error("GRPO checkpoint is required for task fine-tuning")
-            return
+            model.load_state_dict(checkpoint)
         
-        task_results = run_task_finetune_stage(cfg, workdir, grpo_checkpoint_path, task_list)
+        # Create simulator for evaluation
+        simulator = create_simulator(config)
         
-        # Print summary
-        console.rule("[bold green]Training Pipeline Summary")
-        console.print(f"Working directory: {workdir}")
-        console.print(f"SFT checkpoint: {sft_checkpoint_path}")
-        console.print(f"GRPO checkpoint: {grpo_checkpoint_path}")
+        # Evaluate
+        from evaluate import evaluate
+        results = evaluate(
+            model=model,
+            simulator=simulator,
+            num_episodes=config["evaluation"]["num_episodes"],
+            save_videos=config["evaluation"]["save_videos"],
+            video_dir=os.path.join(workdir, "videos"),
+        )
         
-        console.print("\n[bold]Task Fine-tuning Results:")
-        for task, result in task_results.items():
-            if result["success"]:
-                console.print(f"  ✅ {task}: {result['model_path']}")
-            else:
-                console.print(f"  ❌ {task}: {result['error']}")
+        # Save evaluation results
+        eval_path = os.path.join(workdir, "evaluation_results.json")
+        with open(eval_path, 'w') as f:
+            json.dump(results, f, indent=2)
+        
+        print("Final evaluation completed!")
+        print(f"Results saved to {eval_path}")
+        
+        # Close simulator
+        simulator.close()
+        
+        # Update training log
+        training_log["end_time"] = datetime.now().isoformat()
+        training_log["final_evaluation"] = results["metrics"]
+        training_log["status"] = "completed"
+        
+    except Exception as e:
+        print(f"Training pipeline failed: {e}")
+        training_log["end_time"] = datetime.now().isoformat()
+        training_log["status"] = "failed"
+        training_log["error"] = str(e)
+        raise
     
-    # Save final configuration
-    final_config_path = os.path.join(workdir, "final_config.yaml")
-    with open(final_config_path, "w") as f:
-        yaml.dump(cfg.dict(), f, default_flow_style=False)
+    finally:
+        # Save training log
+        log_path = os.path.join(workdir, "training_log.json")
+        with open(log_path, 'w') as f:
+            json.dump(training_log, f, indent=2)
+        
+        print(f"Training log saved to {log_path}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Run complete Nav-R1 training pipeline")
+    parser.add_argument("--config", type=str, required=True, help="Path to configuration file")
+    parser.add_argument("--workdir", type=str, default="runs/navr1_pipeline", help="Working directory")
+    parser.add_argument("--stage", type=str, choices=["sft", "embodied_finetune", "rl", "all"], 
+                       default="all", help="Training stage to run")
+    parser.add_argument("--embodied_task", type=str, choices=["dialogue", "reasoning", "planning", "vln", "objectnav"], 
+                       default="dialogue", help="Embodied task type")
+    parser.add_argument("--resume", type=str, help="Path to checkpoint to resume from")
     
-    console.print(f"\n[bold green]Training pipeline completed!")
-    console.print(f"All outputs saved to: {workdir}")
-    console.print(f"Final config saved to: {final_config_path}")
+    args = parser.parse_args()
+    
+    # Load configuration
+    config = load_config(args.config)
+    
+    # Set device
+    device = config["hardware"]["device"]
+    if device == "cuda" and not torch.cuda.is_available():
+        print("CUDA not available, using CPU")
+        device = "cpu"
+        config["hardware"]["device"] = device
+    
+    # Set random seeds
+    torch.manual_seed(42)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(42)
+    
+    # Add embodied task to config
+    config["embodied_task"] = args.embodied_task
+    
+    # Run training
+    if args.stage == "all":
+        run_complete_pipeline(config, args.workdir)
+    else:
+        # Run specific stage
+        if args.stage == "sft":
+            stage1_sft_training(config, args.workdir)
+        elif args.stage == "embodied_finetune":
+            rl_checkpoint = os.path.join(args.workdir, "rl_checkpoint.pt")
+            stage3_embodied_finetune(config, args.workdir, rl_checkpoint)
+        elif args.stage == "rl":
+            sft_checkpoint = os.path.join(args.workdir, "sft_checkpoint.pt")
+            stage2_rl_training(config, args.workdir, sft_checkpoint)
 
 
 if __name__ == "__main__":
